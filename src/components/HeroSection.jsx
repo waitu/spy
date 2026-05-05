@@ -18,9 +18,9 @@ function SecondaryStory({ story }) {
   );
 }
 
-export function PageMasthead({ eyebrow, title, description }) {
+export function PageMasthead({ eyebrow, title, description, variant = 'default' }) {
   return (
-    <section className="page-masthead site-width">
+    <section className={`page-masthead page-masthead--${variant} site-width`}>
       <span className="eyebrow">{eyebrow}</span>
       <h1>{title}</h1>
       <p>{description}</p>

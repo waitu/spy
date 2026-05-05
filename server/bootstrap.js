@@ -18,6 +18,21 @@ export async function ensureBootstrap() {
     )
   `);
 
+  await query(`
+    alter table if exists stories
+    add column if not exists source_name text
+  `);
+
+  await query(`
+    alter table if exists stories
+    add column if not exists source_url text
+  `);
+
+  await query(`
+    alter table if exists stories
+    add column if not exists is_external boolean not null default false
+  `);
+
   if (!DEFAULT_ADMIN_EMAIL || !DEFAULT_ADMIN_PASSWORD) {
     if (isProduction) {
       throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in production before bootstrapping the admin account.');

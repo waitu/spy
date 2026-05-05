@@ -73,18 +73,28 @@ function AdminRoute() {
 function ChannelDirectory({ navSections }) {
   return (
     <section className="channel-directory site-width">
-      <div className="section-heading">
-        <div>
+      <div className="section-heading section-heading--channels">
+        <div className="section-heading__copy">
           <span className="eyebrow">All Channels</span>
           <h2>Browse every subject</h2>
+          <p>Move through every editorial lane from food and culture to travel, holidays, and more.</p>
+        </div>
+        <div className="section-heading__meta">
+          <strong>{navSections.length}</strong>
+          <span>live channels</span>
         </div>
       </div>
       <div className="channel-card-grid">
         {navSections.map((section) => (
           <article key={section.key} className="channel-card story-surface">
-            <span className="eyebrow">{section.label}</span>
-            <h3>{section.label}</h3>
-            <p>{section.description}</p>
+            <div className="channel-card__top">
+              <span className="eyebrow">{section.label}</span>
+              <span className="channel-card__count">{section.items.length} topics</span>
+            </div>
+            <div className="channel-card__copy">
+              <h3>{section.label}</h3>
+              <p>{section.description}</p>
+            </div>
             <div className="channel-card__topics">
               {section.items.slice(0, 4).map((item) => (
                 <Link key={item.slug} to={`/section/${section.key}/${item.slug}`}>
@@ -92,9 +102,11 @@ function ChannelDirectory({ navSections }) {
                 </Link>
               ))}
             </div>
-            <Link className="section-link" to={section.path}>
-              Open {section.label}
-            </Link>
+            <div className="channel-card__footer">
+              <Link className="channel-card__link" to={section.path}>
+                Explore channel
+              </Link>
+            </div>
           </article>
         ))}
       </div>
@@ -145,6 +157,7 @@ function HomePage() {
   return (
     <>
       <PageMasthead
+        variant="home"
         eyebrow={data.masthead.eyebrow}
         title={data.masthead.title}
         description={data.masthead.description}
@@ -470,6 +483,16 @@ function StoryPage() {
             <span>{data.story.readMinutes} min read</span>
           </div>
           <p className="article-lead">{data.story.excerpt}</p>
+          {data.story.sourceUrl ? (
+            <div className="article-source-card story-surface">
+              <p>
+                Original reporting is available at the source link below.
+              </p>
+              <a className="article-shop-link" href={data.story.sourceUrl} target="_blank" rel="noreferrer">
+                Open source link
+              </a>
+            </div>
+          ) : null}
         </article>
         <div className="article-visual" style={{ '--story-image': toStoryImageBackground(data.story.image) }} />
       </section>

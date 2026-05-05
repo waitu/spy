@@ -31,6 +31,9 @@ function formatStory(row) {
     excerpt: row.excerpt,
     image: row.image,
     body: row.body,
+    sourceName: row.source_name,
+    sourceUrl: row.source_url,
+    isExternal: row.is_external,
     readMinutes: row.read_minutes,
     sectionKey: row.section_key,
     sectionLabel: row.section_label,
@@ -71,7 +74,8 @@ async function loadBaseData() {
     ),
     query(
       `select stories.id, stories.title, stories.category, stories.author, stories.publish_date,
-              stories.excerpt, stories.image, stories.body, stories.read_minutes,
+              stories.excerpt, stories.image, stories.body,
+              stories.source_name, stories.source_url, stories.is_external, stories.read_minutes,
               stories.feature_rank, stories.recent_rank, stories.popular_rank, stories.is_home_lead,
               sections.key as section_key, sections.label as section_label,
               topics.slug as topic_slug, topics.label as topic_label
@@ -141,17 +145,17 @@ export async function getHomePageData() {
 
   return {
     masthead: {
-      eyebrow: 'Daily Spoon',
-      title: 'A homepage that opens into every editorial channel',
-      description: 'The homepage now reads from Postgres and acts as a live hub for every channel and topic.',
+      eyebrow: 'Latest Stories',
+      title: 'Fresh stories organized by section and topic',
+      description: 'The homepage now reflects live editorial metadata grouped across every channel and subtopic.',
     },
     lead,
     featured,
     recent,
     popular,
     editorNote: {
-      title: 'Live editorial stack',
-      text: 'Content is served from Postgres through the Express API, so edits in admin appear across the site immediately.',
+      title: 'Live feed-backed content',
+      text: 'Stories are served from Postgres through the Express API, with source attribution preserved for external articles.',
     },
     navSections: navigation,
   };
@@ -182,7 +186,7 @@ export async function getSectionPageData(sectionKey) {
     popular,
     editorNote: {
       title: `${section.label} channel`,
-      text: `Stories in the ${section.label} channel are queried directly from the database using section and display rank.` ,
+      text: `Stories in the ${section.label} channel are queried directly from the database using section, topic, and display rank.` ,
     },
   };
 }

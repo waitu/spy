@@ -91,6 +91,29 @@ cd /Users/legiang/Desktop/GTE/spy
 npm run build
 ```
 
+## Đồng bộ dữ liệu mới từ feed ngoài
+
+Nếu muốn xóa dữ liệu story cũ trong DB hiện tại và thay bằng feed metadata mới từ nguồn ngoài, chạy:
+
+```bash
+cd /Users/legiang/Desktop/GTE/spy
+npm run sync:external
+```
+
+Lệnh này sẽ:
+
+- xóa `stories`, `topics`, `sections` hiện tại
+- tạo lại cấu trúc section/topic theo hướng editorial thật hơn
+- import các bài mới từ feed ngoài đã cấu hình
+- chỉ lưu metadata có dẫn nguồn (`title`, `author`, `date`, `image`, `source_url`) thay vì sao chép toàn văn bài gốc
+
+Muốn kiểm tra trước khi ghi DB:
+
+```bash
+cd /Users/legiang/Desktop/GTE/spy
+node scripts/sync-brit-co-feed.mjs --dry-run
+```
+
 ## Deploy với Caddy + domain thật
 
 Nếu trước đây bạn dùng `nginx` để nối domain, repo này giờ đã có sẵn cấu hình `Caddy` riêng cho server.
