@@ -91,6 +91,65 @@ cd /Users/legiang/Desktop/GTE/spy
 npm run build
 ```
 
+## Deploy với Caddy + domain thật
+
+Nếu trước đây bạn dùng `nginx` để nối domain, repo này giờ đã có sẵn cấu hình `Caddy` riêng cho server.
+
+Các file liên quan:
+
+- `Caddyfile`
+- `docker-compose.prod.yml`
+
+### 1. Chuẩn bị `.env`
+
+Tạo file `.env` trên server từ `.env.example`, rồi điền giá trị thật:
+
+```dotenv
+DB_NAME=sponbit
+DB_USER=sponbit
+DB_PASSWORD=YOUR_STRONG_DB_PASSWORD
+APP_DOMAIN=yourdomain.com
+AUTH_TOKEN_SECRET=YOUR_LONG_RANDOM_SECRET
+ADMIN_EMAIL=admin@yourdomain.com
+ADMIN_PASSWORD=YOUR_STRONG_ADMIN_PASSWORD
+ADMIN_NAME=Sponbit Admin
+```
+
+### 2. Chạy stack production
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### 3. Caddy làm gì trong repo này
+
+- `https://yourdomain.com` -> proxy tới `web:4173`
+- `https://yourdomain.com/api/*` -> proxy tới `api:4000`
+- `https://www.yourdomain.com` -> redirect về domain chính
+
+### 4. Trỏ Namecheap
+
+Trong `Namecheap -> Domain List -> Manage -> Advanced DNS`:
+
+- `A Record` — `Host: @` — `Value: YOUR_SERVER_IP`
+- `A Record` — `Host: www` — `Value: YOUR_SERVER_IP`
+
+Sau khi DNS trỏ đúng, Caddy sẽ tự xin SSL cho domain.
+
+### 5. Kiểm tra sau khi deploy
+
+```bash
+curl -I http://yourdomain.com
+curl -I https://yourdomain.com
+curl -s https://yourdomain.com/api/health
+```
+
+Nếu SSL chưa lên ngay, chờ DNS propagate thêm vài phút rồi kiểm tra lại log Caddy:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f caddy
+```
+
 ## Checklist trước deploy
 
 - Cập nhật `.env` với `AUTH_TOKEN_SECRET` mạnh và credential admin riêng.
