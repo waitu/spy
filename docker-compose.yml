@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dailyspoon}
+      POSTGRES_USER: ${DB_USER:-dailyspoon}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dailyspoon}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-dailyspoon} -d ${DB_NAME:-dailyspoon}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-dailyspoon}
+      DB_PASSWORD: ${DB_PASSWORD:-dailyspoon}
+      DB_NAME: ${DB_NAME:-dailyspoon}
+    ports:
+      - '4000:4000'
+    volumes:
+      - uploads_data:/app/server/uploads
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      VITE_API_PROXY_TARGET: http://api:4000
+    ports:
+      - '4173:4173'
+
+volumes:
+  postgres_data:
+  uploads_data:
