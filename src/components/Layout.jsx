@@ -4,6 +4,7 @@ import { ChevronDown, Menu, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSite } from '../context/SiteContext';
 import { sectionPath, topicPath } from '../lib/content';
+import { SponbitLogo } from './SponbitLogo';
 
 export function Layout({ children }) {
   const [openSectionKey, setOpenSectionKey] = useState(null);
@@ -24,9 +25,8 @@ export function Layout({ children }) {
           <button className="header-icon" type="button" aria-label="Open menu">
             <Menu size={18} />
           </button>
-          <Link className="brand-lockup" to="/">
-            <span className="brand-title">Sponbit</span>
-            <span className="brand-subtitle">FOOD + CULTURE</span>
+          <Link className="brand-lockup" to="/" aria-label="Sponbit – trang chủ">
+            <SponbitLogo className="brand-svg-logo" />
           </Link>
           <div className="header-tools">
             <button className="header-icon" type="button" aria-label="Search">
@@ -117,8 +117,8 @@ export function Layout({ children }) {
       <footer className="site-footer">
         <div className="site-width footer-grid">
           <div>
-            <div className="footer-logo">Sponbit</div>
-            <p>React editorial UI kit lấy cảm hứng từ trang chủ magazine nhiều chuyên mục.</p>
+            <SponbitLogo className="footer-svg-logo" />
+            <p>Khám phá ẩm thực, phong cách sống và văn hóa đương đại.</p>
           </div>
           <div>
             <h4>Channels</h4>

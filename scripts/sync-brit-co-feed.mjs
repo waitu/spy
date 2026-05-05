@@ -1,7 +1,6 @@
 import { pool, query } from '../server/db.js';
 
 const FEED_URL = 'https://www.brit.co/feed';
-const SOURCE_NAME = 'External Source';
 const DEFAULT_IMAGE = 'linear-gradient(135deg, #efe3d5 0%, #e0c5aa 50%, #d2b39c 100%)';
 
 const SECTION_DEFINITIONS = [
@@ -122,6 +121,7 @@ function parseFeed(xml) {
     const block = match[1];
     const link = extractTag(block, 'link') || extractTag(block, 'guid');
 
+    const rawDescription = extractTag(block, 'description');
     return {
       id: slugFromUrl(link),
       title: extractTag(block, 'title'),
@@ -130,7 +130,8 @@ function parseFeed(xml) {
       publishDate: toDateOnly(extractTag(block, 'pubDate')),
       categories: extractCategories(block),
       image: extractMediaUrl(block) || DEFAULT_IMAGE,
-      description: stripHtml(extractTag(block, 'description')),
+      description: stripHtml(rawDescription),
+      rawHtml: rawDescription,
     };
   }).filter((item) => item.title && item.link && item.publishDate);
 }
@@ -142,6 +143,15 @@ function hasAny(values, candidates) {
 function resolvePlacement(item) {
   const categories = item.categories.map((value) => value.toLowerCase().trim());
   const title = item.title.toLowerCase();
+
+  // Shopping rules first — gift guides and home decor should win over other signals
+  if (hasAny(categories, ['home decor', 'interior design', 'home decor ideas', 'home decor inspiration', 'homedecor'])) {
+    return ['shopping', 'home-decor'];
+  }
+
+  if (hasAny(categories, ['gift guide', 'gift ideas', 'gifts', 'gifts for her', 'gifts for moms', "mother's day gifts", 'editecom'])) {
+    return ['shopping', 'gift-guides'];
+  }
 
   if (hasAny(categories, ['cocktail', 'cocktail recipe', 'cocktail recipes', 'drink', 'drink recipes']) || title.includes('cocktail')) {
     return ['food', 'cocktails'];
@@ -211,14 +221,6 @@ function resolvePlacement(item) {
     return ['holidays', title.includes("mother's day") ? 'mothers-day' : 'holidays'];
   }
 
-  if (hasAny(categories, ['home decor', 'interior design', 'home decor ideas', 'home decor inspiration'])) {
-    return ['shopping', 'home-decor'];
-  }
-
-  if (hasAny(categories, ['gift guide', 'gift ideas', 'gifts', 'gifts for her', 'gifts for moms'])) {
-    return ['shopping', 'gift-guides'];
-  }
-
   if (hasAny(categories, ['style', 'fashion'])) {
     return ['shopping', 'style-news'];
   }
@@ -226,16 +228,18 @@ function resolvePlacement(item) {
   return null;
 }
 
-function buildExcerpt(item, topicLabel) {
-  const label = topicLabel || item.categories[0] || 'editorial';
-  return `A fresh ${label.toLowerCase()} update built from sourced editorial metadata and organized for Sponbit readers.`;
+function buildExcerpt(item) {
+  const text = item.description.replace(/\s+/g, ' ').trim();
+  return text.length > 220 ? text.slice(0, 220).replace(/\s+\S+$/, '') + '…' : text;
 }
 
 function buildBody(item) {
-  return [
-    '<p>This page presents a Sponbit-ready editorial version built from externally sourced metadata. Use the source link below if you want to review the original report.</p>',
-    `<div class="article-button-row"><a class="article-shop-link" href="${item.link}" target="_blank" rel="noreferrer">Open source link</a></div>`,
-  ].join('');
+  // Strip the leading <img> thumbnail brit.co injects at the top of every description
+  const cleaned = (item.rawHtml || '')
+    .replace(/^\s*<img[^>]*>\s*(<br\s*\/?> *){0,2}\s*/i, '')
+    .trim();
+  const body = cleaned || `<p>${item.description}</p>`;
+  return body;
 }
 
 async function ensureStructure() {
@@ -254,7 +258,7 @@ async function ensureStructure() {
     add column if not exists is_external boolean not null default false
   `);
 
-  await query('delete from stories');
+  await query('delete from stories where is_external = true');
   await query('delete from topics');
   await query('delete from sections');
 
@@ -359,26 +363,26 @@ async function syncFeed({ dryRun = false } = {}) {
       await query(
         `insert into stories (
           id, section_id, topic_id, title, category, author, publish_date, excerpt, image, body,
-          source_name, source_url, is_external,
+          source_url, is_external,
           read_minutes, feature_rank, recent_rank, popular_rank, is_home_lead
         )
         values (
           $1, (select id from sections where key = $2), $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13,
-          $14, $15, $16, $17, $18
-        )`,
+          $11, $12,
+          $13, $14, $15, $16, $17
+        )
+        on conflict (id) do nothing`,
         [
           item.id,
           item.sectionKey,
           topic?.id ?? null,
           item.title,
-          topic?.label ?? item.categories[0] ?? SOURCE_NAME,
+          topic?.label ?? item.categories[0] ?? 'Editorial',
           item.author,
           item.publishDate,
-          buildExcerpt(item, topic?.label),
+          buildExcerpt(item),
           item.image,
           buildBody(item),
-          SOURCE_NAME,
           item.link,
           true,
           4,
@@ -391,7 +395,7 @@ async function syncFeed({ dryRun = false } = {}) {
     }
 
     await query('commit');
-    console.log(`Imported ${items.length} stories from ${SOURCE_NAME}.`);
+    console.log(`Imported ${items.length} stories.`);
   } catch (error) {
     await query('rollback');
     throw error;

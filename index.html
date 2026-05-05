@@ -1,19 +1,64 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Daily Spoon | React Editorial Demo</title>
-    <meta
-      name="description"
-      content="React editorial food news demo với bố cục lấy cảm hứng từ magazine layout."
-    />
+
+    <!-- Primary SEO -->
+    <title>Sponbit – Food, Culture & Modern Lifestyle</title>
+    <meta name="description" content="Sponbit is your guide to food, beauty, home, DIY and modern culture. Discover inspiring stories, recipes, and lifestyle ideas every day." />
+    <meta name="keywords" content="food, culture, lifestyle, beauty, home, DIY, recipes, Sponbit" />
+    <meta name="author" content="Sponbit" />
+    <link rel="canonical" href="https://sponbit.com/" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sponbit.com/" />
+    <meta property="og:site_name" content="Sponbit" />
+    <meta property="og:title" content="Sponbit – Food, Culture & Modern Lifestyle" />
+    <meta property="og:description" content="Discover inspiring stories about food, beauty, home and modern culture on Sponbit." />
+    <meta property="og:image" content="https://sponbit.com/og-cover.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@sponbit" />
+    <meta name="twitter:title" content="Sponbit – Food, Culture & Modern Lifestyle" />
+    <meta name="twitter:description" content="Discover inspiring stories about food, beauty, home and modern culture on Sponbit." />
+    <meta name="twitter:image" content="https://sponbit.com/og-cover.jpg" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <meta name="theme-color" content="#ff6347" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;700&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Sponbit",
+      "url": "https://sponbit.com",
+      "description": "Your guide to food, beauty, home, DIY and modern culture",
+      "inLanguage": "en",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://sponbit.com/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

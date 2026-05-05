@@ -92,9 +92,23 @@ textarea {
 }
 
 .brand-lockup {
-  display: grid;
-  gap: 4px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+}
+
+.brand-svg-logo {
+  height: 44px;
+  width: auto;
+  color: var(--text);
+  display: block;
+}
+
+.footer-svg-logo {
+  height: 38px;
+  width: auto;
+  color: var(--text);
+  display: block;
+  margin-bottom: 10px;
 }
 
 .brand-title,

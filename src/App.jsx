@@ -483,16 +483,6 @@ function StoryPage() {
             <span>{data.story.readMinutes} min read</span>
           </div>
           <p className="article-lead">{data.story.excerpt}</p>
-          {data.story.sourceUrl ? (
-            <div className="article-source-card story-surface">
-              <p>
-                Original reporting is available at the source link below.
-              </p>
-              <a className="article-shop-link" href={data.story.sourceUrl} target="_blank" rel="noreferrer">
-                Open source link
-              </a>
-            </div>
-          ) : null}
         </article>
         <div className="article-visual" style={{ '--story-image': toStoryImageBackground(data.story.image) }} />
       </section>
