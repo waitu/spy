@@ -86,7 +86,8 @@ export const homeLead = withStoryPath({
   author: 'Le Giang Studio',
   date: 'Apr 29, 2026',
   excerpt:
-    'Trang chủ mới hoạt động như một magazine hub thật: từ đó bạn có thể đi vào từng channel chính và từng đầu mục con theo cấu trúc editorial rõ ràng.',
+    'The new homepage fans out into every editorial channel with a clean magazine structure — from top-level sections to subcategory landing pages.',
+
   image: gradient('135deg, #efb36d 0%, #ff7a7d 46%, #865cff 100%'),
 });
 

@@ -234,9 +234,14 @@ function buildExcerpt(item) {
 }
 
 function buildBody(item) {
-  // Strip the leading <img> thumbnail brit.co injects at the top of every description
+  // Strip brit.co injected promo content and leading thumbnail
   const cleaned = (item.rawHtml || '')
     .replace(/^\s*<img[^>]*>\s*(<br\s*\/?> *){0,2}\s*/i, '')
+    .replace(/Free Trial for 120\+[^<]*/gi, '')
+    .replace(/<a[^>]*learn\.brit\.co[^>]*>.*?<\/a>/gi, '')
+    .replace(/## We value your privacy[\s\S]*?AGREE/gi, '')
+    .replace(/Keep up with all.*?can't miss\.<\/p>/gi, '')
+    .replace(/<p>\s*<\/p>/gi, '')
     .trim();
   const body = cleaned || `<p>${item.description}</p>`;
   return body;

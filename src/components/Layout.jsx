@@ -19,13 +19,12 @@ export function Layout({ children }) {
 
   return (
     <div className="page-shell">
-      <div className="promo-bar">Free Trial for 120+ Creative Classes</div>
       <header className="site-header">
         <div className="header-top site-width">
           <button className="header-icon" type="button" aria-label="Open menu">
             <Menu size={18} />
           </button>
-          <Link className="brand-lockup" to="/" aria-label="Sponbit – trang chủ">
+          <Link className="brand-lockup" to="/" aria-label="Sponbit – Home">
             <SponbitLogo className="brand-svg-logo" />
           </Link>
           <div className="header-tools">
@@ -118,7 +117,7 @@ export function Layout({ children }) {
         <div className="site-width footer-grid">
           <div>
             <SponbitLogo className="footer-svg-logo" />
-            <p>Khám phá ẩm thực, phong cách sống và văn hóa đương đại.</p>
+            <p>Food, culture & modern lifestyle.</p>
           </div>
           <div>
             <h4>Channels</h4>

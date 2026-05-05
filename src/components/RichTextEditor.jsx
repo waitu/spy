@@ -3,7 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { Bold, Heading2, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, RotateCcw, Unlink } from 'lucide-react';
+import { Bold, Heading2, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Maximize2, Minimize2, Quote, RotateCcw, Unlink } from 'lucide-react';
 
 function ToolbarButton({ active = false, disabled = false, onClick, title, children }) {
   return (
@@ -22,6 +22,7 @@ function ToolbarButton({ active = false, disabled = false, onClick, title, child
 export function RichTextEditor({ value, onChange, onUploadImage, disabled = false }) {
   const fileInputRef = useRef(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const normalizedValue = useMemo(() => (String(value ?? '').trim() ? value : '<p></p>'), [value]);
 
@@ -103,7 +104,11 @@ export function RichTextEditor({ value, onChange, onUploadImage, disabled = fals
   }
 
   return (
-    <div className={disabled ? 'rich-text-editor is-disabled' : 'rich-text-editor'}>
+    <div className={[
+      'rich-text-editor',
+      disabled ? 'is-disabled' : '',
+      isFullscreen ? 'is-fullscreen' : '',
+    ].filter(Boolean).join(' ')}>
       <div className="editor-toolbar" role="toolbar" aria-label="Story body formatting tools">
         <ToolbarButton
           title="Paragraph"
@@ -189,6 +194,13 @@ export function RichTextEditor({ value, onChange, onUploadImage, disabled = fals
           disabled={!editor || disabled}
         >
           <RotateCcw size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          onClick={() => setIsFullscreen((v) => !v)}
+          disabled={!editor}
+        >
+          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </ToolbarButton>
       </div>
       <input
