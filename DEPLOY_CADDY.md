@@ -73,6 +73,8 @@ Repo này đã có sẵn:
 - `Caddyfile`
 - `docker-compose.prod.yml`
 
+`docker-compose.prod.yml` dùng `server/sql/schema.sql`, nên môi trường production mới chỉ tạo bảng cần thiết, không tự seed dữ liệu bài mẫu.
+
 Chạy:
 
 ```bash
@@ -125,6 +127,15 @@ Sau khi Caddy lên và domain trỏ đúng, test:
 - upload ảnh trong editor
 - API health `/api/health`
 
-## 9. Ghi chú quan trọng
+## 9. Nếu production đã có sẵn dữ liệu mẫu
+
+Nếu bạn từng chạy production bằng file seed demo cũ (`server/sql/init.sql`), dữ liệu mẫu đã nằm trong volume Postgres và không biến mất chỉ vì compose file đổi sang `schema.sql`.
+
+Trong trường hợp đó bạn cần một trong hai cách:
+
+- reset volume Postgres để tạo DB sạch lại từ đầu
+- hoặc vào Postgres và xóa dữ liệu demo thủ công
+
+## 10. Ghi chú quan trọng
 
 Repo hiện đã có cấu hình để chạy sau `Caddy`, nhưng runtime của `web` và `api` vẫn đang thiên về kiểu dev container hơn production tối ưu. Nghĩa là bạn có thể nối domain và chạy thật ngay, nhưng nếu muốn tối ưu thêm thì bước sau nên là chỉnh Dockerfile sang production runtime.

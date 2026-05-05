@@ -121,6 +121,8 @@ ADMIN_NAME=Sponbit Admin
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+Production compose dùng `server/sql/schema.sql`, nên DB production mới sẽ chỉ tạo schema và tài khoản admin seed từ server, **không tự đổ dữ liệu demo**.
+
 ### 3. Caddy làm gì trong repo này
 
 - `https://yourdomain.com` -> proxy tới `web:4173`
@@ -149,6 +151,15 @@ Nếu SSL chưa lên ngay, chờ DNS propagate thêm vài phút rồi kiểm tra
 ```bash
 docker compose -f docker-compose.prod.yml logs -f caddy
 ```
+
+### 6. Nếu production DB đã lỡ có dữ liệu mẫu
+
+Việc đổi sang `schema.sql` chỉ áp dụng cho **database volume mới**. Nếu bạn đã khởi động production trước đó bằng `server/sql/init.sql`, dữ liệu mẫu đã nằm sẵn trong volume Postgres hiện tại và sẽ không tự mất đi.
+
+Bạn có 2 cách:
+
+- xóa volume Postgres production để khởi tạo lại DB sạch
+- hoặc tự xóa dữ liệu demo trong Postgres rồi giữ lại user/admin hiện tại
 
 ## Checklist trước deploy
 
