@@ -232,6 +232,346 @@ const STORY_DEFINITIONS = [
     popularRank: null,
     isHomeLead: false,
   },
+  {
+    id: 'starter-shopping-carryall-edit',
+    sectionKey: 'shopping',
+    topicSlug: 'style-news',
+    title: 'The New Carryall Edit Is About Structure, Not Size',
+    category: 'Style News',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-30',
+    excerpt: 'A good everyday bag earns its place with clean lines, a practical opening, and just enough polish to sharpen basics.',
+    image: 'linear-gradient(135deg, #ecd3c6 0%, #d7a69a 50%, #b67a74 100%)',
+    body: `
+      <p>Shopping coverage should feel useful at first glance. A story about bags, shoes, or outerwear works especially well in a starter archive because readers instantly understand the use case.</p>
+      <p>The strongest picks usually balance shape and function. When something looks refined and still works during a packed weekday, it stays in rotation longer.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: 9,
+    popularRank: 5,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-shopping-host-gifts',
+    sectionKey: 'shopping',
+    topicSlug: 'gift-guides',
+    title: 'Host Gifts That Feel Considered Without Looking Predictable',
+    category: 'Gift Guides',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-29',
+    excerpt: 'The best host gifts are practical enough to use immediately and stylish enough to feel like a real treat.',
+    image: 'linear-gradient(135deg, #f3dfcb 0%, #ddb798 50%, #c68f77 100%)',
+    body: `
+      <p>Gift-guide content brings a helpful service layer to the site. It also gives the shopping section a softer, more seasonal rhythm than pure trend coverage.</p>
+      <p>The easiest way to make this format strong is to lead with usefulness, then add one design detail that makes the recommendation feel more personal.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: 10,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-shopping-bedroom-lighting',
+    sectionKey: 'shopping',
+    topicSlug: 'home-decor',
+    title: 'Bedroom Lighting Looks Better When Every Layer Does a Different Job',
+    category: 'Home Decor',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-28',
+    excerpt: 'A room feels calmer when overhead light, bedside light, and accent glow each handle their own mood.',
+    image: 'linear-gradient(135deg, #e6d7d0 0%, #ccb7af 50%, #a88f88 100%)',
+    body: `
+      <p>Home stories are especially strong in a starter library because they age well. Readers can land on them weeks later and still get something practical out of the piece.</p>
+      <p>Lighting is a useful entry point because it changes the feeling of a room faster than most furniture decisions ever will.</p>
+    `,
+    readMinutes: 4,
+    featureRank: null,
+    recentRank: 11,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-selfcare-scalp-reset',
+    sectionKey: 'self-care',
+    topicSlug: 'hair',
+    title: 'Why a Weekly Scalp Reset Can Make the Rest of Your Hair Routine Easier',
+    category: 'Hair',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-28',
+    excerpt: 'Healthy-looking hair often starts with less buildup, gentler washing, and one ritual you can actually keep up.',
+    image: 'linear-gradient(135deg, #efd4cc 0%, #dca6a2 50%, #bc7f87 100%)',
+    body: `
+      <p>Hair coverage works best when it sounds practical instead of preachy. People want routines that reduce effort, not product stacks that create more of it.</p>
+      <p>A scalp-first story is a simple way to make the category feel grounded and useful right away.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: 12,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-selfcare-morning-walks',
+    sectionKey: 'self-care',
+    topicSlug: 'health',
+    title: 'The Case for Morning Walks That Do Not Turn Into Productivity Theater',
+    category: 'Health',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-27',
+    excerpt: 'A short walk works best when it clears your head, resets your posture, and asks almost nothing from the rest of your day.',
+    image: 'linear-gradient(135deg, #dde8df 0%, #b9d0bf 48%, #7ca087 100%)',
+    body: `
+      <p>Self-care content should not feel over-engineered. The strongest health stories usually describe a habit in a way that makes it feel approachable instead of aspirational.</p>
+      <p>That is especially useful in a starter archive, where every story needs to signal the tone of the whole section quickly.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: 6,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-selfcare-soft-glow',
+    sectionKey: 'self-care',
+    topicSlug: 'beauty-and-skincare',
+    title: 'Soft-Glow Makeup Works Best When Skin Still Looks Like Skin',
+    category: 'Beauty & Skincare',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-26',
+    excerpt: 'The prettiest finish usually comes from strategic coverage, brushed-up texture, and one tone that wakes up the face.',
+    image: 'linear-gradient(135deg, #f4ddd7 0%, #e9b8b3 50%, #cb8c8a 100%)',
+    body: `
+      <p>Beauty stories help a new homepage feel polished. They also let the editorial voice sound light, specific, and advice-driven without being too technical.</p>
+      <p>A story about soft-glow makeup fits because it is easy to imagine, easy to click, and easy to build on later.</p>
+    `,
+    readMinutes: 4,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-celeb-press-tour',
+    sectionKey: 'celebrity',
+    topicSlug: 'celebrity-news',
+    title: 'Why Press-Tour Style Still Matters in a Feed-First Celebrity Cycle',
+    category: 'Celebrity News',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-25',
+    excerpt: 'A great press tour builds momentum through repetition, point of view, and one visual theme people can follow from stop to stop.',
+    image: 'linear-gradient(135deg, #ddd1df 0%, #b799c0 48%, #866f98 100%)',
+    body: `
+      <p>Celebrity coverage makes a front page feel current, but it works best when it has a clear angle. A press-tour story is useful because it lets fashion, publicity, and internet reaction all meet in one place.</p>
+      <p>That mix gives the category energy without needing daily breaking-news volume.</p>
+    `,
+    readMinutes: 4,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-celeb-friendship-era',
+    sectionKey: 'celebrity',
+    topicSlug: 'celebrity-news',
+    title: 'Why Celebrity Friendship Stories Travel Faster Than Official Announcements',
+    category: 'Celebrity News',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-24',
+    excerpt: 'People respond to chemistry, recurring cameos, and small details that make public relationships feel less managed.',
+    image: 'linear-gradient(135deg, #e5d7dc 0%, #cdb1bb 50%, #a27d90 100%)',
+    body: `
+      <p>Not every culture story needs a giant event attached to it. Sometimes the strongest celebrity content is about why a small narrative catches on so quickly.</p>
+      <p>That kind of framing gives the category more shape than a plain recap ever could.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-celeb-event-beauty',
+    sectionKey: 'celebrity',
+    topicSlug: 'red-carpet',
+    title: 'The Beauty Detail That Keeps a Formal Look From Feeling Too Safe',
+    category: 'Red Carpet',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-23',
+    excerpt: 'When the dress is controlled, beauty can carry the surprise through texture, shine, or one deliberately sharp contrast.',
+    image: 'linear-gradient(135deg, #ead9de 0%, #cda6b2 50%, #956f86 100%)',
+    body: `
+      <p>Event-style coverage should say something clear quickly. One of the easiest ways to do that is to isolate the detail that made a polished look feel modern.</p>
+      <p>That keeps the read focused and makes the category easier to scan.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-entertainment-cozy-series',
+    sectionKey: 'entertainment',
+    topicSlug: 'tv-shows',
+    title: 'What Makes a Cozy Series Feel Worth Starting on a Busy Weeknight',
+    category: 'TV Shows',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-22',
+    excerpt: 'Low-stakes momentum, strong side characters, and a world that feels easy to re-enter can carry a whole season.',
+    image: 'linear-gradient(135deg, #dfe0ef 0%, #b9bbdf 48%, #898db8 100%)',
+    body: `
+      <p>TV coverage is strongest when it speaks to the rhythm of real watching habits. Most people are not choosing only by genre; they are choosing by energy level.</p>
+      <p>A story like this helps the entertainment section feel friendly and current without needing a giant release calendar.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-entertainment-movie-night',
+    sectionKey: 'entertainment',
+    topicSlug: 'movies',
+    title: 'The Best Movie Nights Start With One Strong Theme and Zero Overplanning',
+    category: 'Movies',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-21',
+    excerpt: 'Pick one mood, one snack direction, and one reason the movie matches the night, and the rest usually falls into place.',
+    image: 'linear-gradient(135deg, #e7ddd3 0%, #c9b29e 50%, #947d71 100%)',
+    body: `
+      <p>Movie stories give the site another easy-entry format that can be both service-driven and atmospheric. They make the entertainment section feel lived in.</p>
+      <p>That balance is useful on a new site, where every section needs enough depth to invite people back.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-entertainment-book-club',
+    sectionKey: 'entertainment',
+    topicSlug: 'books',
+    title: 'A Better Book-Club Pick Balances Discussion Potential With Pure Readability',
+    category: 'Books',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-20',
+    excerpt: 'The strongest picks are the ones people can finish, argue about, and still recommend to someone outside the group.',
+    image: 'linear-gradient(135deg, #ece4d5 0%, #d5c0a4 48%, #aa8d72 100%)',
+    body: `
+      <p>Books coverage helps round out the culture mix. It signals that the site is not only chasing immediacy, but also making space for slower recommendations and richer discussion.</p>
+      <p>That gives the entertainment section longer shelf life overall.</p>
+    `,
+    readMinutes: 4,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-entertainment-backlist-books',
+    sectionKey: 'entertainment',
+    topicSlug: 'books',
+    title: 'Why Backlist Books Sometimes Hit Harder Than the New-Release Table',
+    category: 'Books',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-19',
+    excerpt: 'A strong older title arrives without hype pressure, which can make the reading experience feel more personal and lasting.',
+    image: 'linear-gradient(135deg, #ebe1da 0%, #ccb7aa 50%, #9f8376 100%)',
+    body: `
+      <p>Backlist coverage is useful in a starter archive because it immediately broadens the tone of the section. It tells readers the site can recommend, not only react.</p>
+      <p>That makes the books category feel more intentional from the start.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-food-dinner-party-flow',
+    sectionKey: 'food',
+    topicSlug: 'recipes',
+    title: 'The Best Dinner Parties Move on a Simple Three-Course Rhythm',
+    category: 'Recipes',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-18',
+    excerpt: 'One bright starter, one generous main, and one low-stress dessert is usually enough to make the night feel complete.',
+    image: 'linear-gradient(135deg, #f2dbb4 0%, #ddb07b 48%, #b97d5d 100%)',
+    body: `
+      <p>Food content gets stronger fast when it starts to reflect real-life hosting. Not everything has to be a recipe card; some of the most useful reads are about sequencing and confidence.</p>
+      <p>That kind of framing adds range to the section right away.</p>
+    `,
+    readMinutes: 4,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-food-drinks-cart',
+    sectionKey: 'food',
+    topicSlug: 'cocktails',
+    title: 'A Drinks Cart Feels Better When It Is Edited Like a Small Menu',
+    category: 'Cocktails',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-17',
+    excerpt: 'Three reliable pours, one bright mixer, and one bottle that sparks conversation is usually all you need.',
+    image: 'linear-gradient(135deg, #f2d7c3 0%, #db9f7a 48%, #ae715a 100%)',
+    body: `
+      <p>Cocktail stories add a different energy to the food section. They feel social, visual, and easy to revisit ahead of weekends or small gatherings.</p>
+      <p>That makes them a strong fit for a starter archive meant to feel broad without becoming noisy.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-food-lunch-reset',
+    sectionKey: 'food',
+    topicSlug: 'food-news-and-menu-updates',
+    title: 'Why Midday Food Coverage Works Best When It Solves the 1 PM Slump',
+    category: 'Food News & Menu Updates',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-16',
+    excerpt: 'The most useful lunch ideas balance speed, texture, and enough flavor to stop the afternoon from flattening out.',
+    image: 'linear-gradient(135deg, #f1dbb7 0%, #e0b17f 46%, #bd815c 100%)',
+    body: `
+      <p>Stories about quick meals and midday resets are easy wins because they map directly onto everyday reader behavior. They also keep food coverage from leaning too far into occasion-only content.</p>
+      <p>That balance matters on a homepage that wants to feel active all week long.</p>
+    `,
+    readMinutes: 3,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
+  {
+    id: 'starter-travel-neighborhood-hotel',
+    sectionKey: 'travel',
+    topicSlug: 'travel',
+    title: 'The Best City Hotels Make You Want to Spend Time in the Neighborhood Too',
+    category: 'Travel',
+    author: 'Sponbit Editorial',
+    publishDate: '2026-04-15',
+    excerpt: 'A stay feels more memorable when the hotel is part retreat, part launchpad, and not a sealed-off bubble.',
+    image: 'linear-gradient(135deg, #d8e4e1 0%, #acc4bc 48%, #6f9289 100%)',
+    body: `
+      <p>Travel stories do their best work when they suggest a whole rhythm rather than a checklist. Readers want to imagine how a stay will feel, not just where they will sleep.</p>
+      <p>That makes neighborhood-focused travel coverage especially effective in a starter archive.</p>
+    `,
+    readMinutes: 4,
+    featureRank: null,
+    recentRank: null,
+    popularRank: null,
+    isHomeLead: false,
+  },
 ];
 
 async function ensureSchemaColumns() {

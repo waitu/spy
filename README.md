@@ -114,6 +114,24 @@ cd /Users/legiang/Desktop/GTE/spy
 node scripts/sync-brit-co-feed.mjs --dry-run
 ```
 
+## Seed nội dung gốc cho server trống
+
+Nếu server chưa có `Sections`, `Topics`, `Stories`, bạn có thể bơm ngay một bộ starter content gốc của `Sponbit` bằng lệnh:
+
+```bash
+cd /Users/legiang/Desktop/GTE/spy
+npm run seed:starter
+```
+
+Lệnh này sẽ:
+
+- giữ nguyên schema hiện có
+- upsert `sections` và `topics` cơ bản
+- thêm các `stories` starter do chính project tạo ra
+- không dùng nội dung bài viết từ nguồn ngoài
+
+Phù hợp cho môi trường mới dựng để site không bị trống trước khi bạn tự viết bài thật.
+
 ## Deploy với Caddy + domain thật
 
 Nếu trước đây bạn dùng `nginx` để nối domain, repo này giờ đã có sẵn cấu hình `Caddy` riêng cho server.
