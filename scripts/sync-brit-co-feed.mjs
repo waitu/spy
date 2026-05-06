@@ -240,10 +240,15 @@ function buildBody(item) {
     .replace(/Free Trial for 120\+[^<]*/gi, '')
     .replace(/<a[^>]*learn\.brit\.co[^>]*>.*?<\/a>/gi, '')
     .replace(/## We value your privacy[\s\S]*?AGREE/gi, '')
-    // Remove "Keep up with all Brit + Co's ..." CTA paragraphs
-    .replace(/<p[^>]*>.*?(?:Brit\s*\+?\s*Co|brit\.co).*?<\/p>/gis, '')
-    // Remove standalone mentions: "Brit + Co", "Brit+Co", "brit.co", "Brit + Co's"
-    .replace(/Brit\s*\+\s*Co(?:'s)?/gi, '')
+    // Remove paragraphs containing Brit+Co or brit.co (including nested tags, dotAll)
+    .replace(/<p[^>]*>(?:(?!<\/p>)[\s\S])*?(?:Brit\s*\+?\s*Co|brit\.co)[\s\S]*?<\/p>/gi, '')
+    // Remove "Keep up with all ... can't miss" trailing CTAs (with curly or straight apostrophe)
+    .replace(/Keep up with all[\s\S]*?can\u2019t miss\.?/gi, '')
+    .replace(/Keep up with all[\s\S]*?can't miss\.?/gi, '')
+    // Remove "follow us on Facebook/Instagram/..." sentences
+    .replace(/[^<]*follow us on (?:Facebook|Instagram|Twitter|social media)[^<]*/gi, '')
+    // Remove standalone brand mentions remaining in text nodes
+    .replace(/Brit\s*\+\s*Co(?:[\u2019']s)?/gi, '')
     .replace(/brit\.co/gi, '')
     // Clean up empty tags and extra whitespace
     .replace(/<p>\s*<\/p>/gi, '')
