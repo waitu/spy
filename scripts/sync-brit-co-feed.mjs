@@ -240,10 +240,17 @@ function buildBody(item) {
     .replace(/Free Trial for 120\+[^<]*/gi, '')
     .replace(/<a[^>]*learn\.brit\.co[^>]*>.*?<\/a>/gi, '')
     .replace(/## We value your privacy[\s\S]*?AGREE/gi, '')
-    .replace(/Keep up with all.*?can't miss\.<\/p>/gi, '')
+    // Remove "Keep up with all Brit + Co's ..." CTA paragraphs
+    .replace(/<p[^>]*>.*?(?:Brit\s*\+?\s*Co|brit\.co).*?<\/p>/gis, '')
+    // Remove standalone mentions: "Brit + Co", "Brit+Co", "brit.co", "Brit + Co's"
+    .replace(/Brit\s*\+\s*Co(?:'s)?/gi, '')
+    .replace(/brit\.co/gi, '')
+    // Clean up empty tags and extra whitespace
     .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<strong>\s*<\/strong>/gi, '')
+    .replace(/\s{2,}/g, ' ')
     .trim();
-  const body = cleaned || `<p>${item.description}</p>`;
+  const body = cleaned || `<p>${item.description.replace(/Brit\s*\+\s*Co(?:'s)?/gi, '').replace(/brit\.co/gi, '')}</p>`;
   return body;
 }
 
