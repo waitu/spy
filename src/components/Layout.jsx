@@ -8,6 +8,7 @@ import { SponbitLogo } from './SponbitLogo';
 
 export function Layout({ children }) {
   const [openSectionKey, setOpenSectionKey] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -43,8 +44,8 @@ export function Layout({ children }) {
     <div className="page-shell">
       <header className="site-header">
         <div className="header-top site-width">
-          <button className="header-icon" type="button" aria-label="Open menu">
-            <Menu size={18} />
+          <button className="header-icon header-menu-btn" type="button" aria-label="Open menu" onClick={() => setMobileMenuOpen((v) => !v)}>
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
           <Link className="brand-lockup" to="/" aria-label="Sponbit – Home">
             <SponbitLogo className="brand-svg-logo" />
@@ -150,6 +151,43 @@ export function Layout({ children }) {
             ))}
           </nav>
         </div>
+
+        {mobileMenuOpen && (
+          <nav className="mobile-menu" aria-label="Mobile navigation">
+            {navSections.map((section) => (
+              <div key={section.key} className="mobile-menu__section">
+                <Link
+                  className="mobile-menu__section-link"
+                  to={section.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {section.label}
+                </Link>
+                {section.items.map((item) => (
+                  <Link
+                    key={item.slug}
+                    className="mobile-menu__topic-link"
+                    to={topicPath(section.key, item.slug)}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            ))}
+            <div className="mobile-menu__divider" />
+            {quickLinks.map((link) => (
+              <Link
+                key={link.to}
+                className="mobile-menu__section-link"
+                to={link.to}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </header>
       <main>{children}</main>
       <footer className="site-footer">

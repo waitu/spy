@@ -148,6 +148,10 @@ textarea {
   gap: 12px;
 }
 
+.header-menu-btn {
+  display: none;
+}
+
 .header-search-form {
   display: flex;
   align-items: center;
@@ -1769,6 +1773,50 @@ blockquote {
 }
 
 @media (max-width: 760px) {
+  .header-menu-btn {
+    display: flex;
+  }
+
+  .header-nav-wrap {
+    display: none;
+  }
+
+  .mobile-menu {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 16px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mobile-menu__section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-menu__section-link {
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .mobile-menu__topic-link {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    text-decoration: none;
+    color: var(--text-muted, #666);
+  }
+
+  .mobile-menu__divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
   .site-width {
     width: min(100vw - 20px, 1232px);
   }
