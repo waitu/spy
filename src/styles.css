@@ -148,6 +148,27 @@ textarea {
   gap: 12px;
 }
 
+.header-search-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-search-input {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--text);
+  width: 200px;
+  outline: none;
+}
+
+.header-search-input:focus {
+  border-color: var(--accent);
+}
+
 .header-nav-wrap {
   border-top: 1px solid var(--border);
 }

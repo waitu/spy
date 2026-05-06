@@ -244,6 +244,22 @@ export async function getStoryPageData(storyId) {
   return { story, related };
 }
 
+export async function searchStories(q) {
+  const normalized = String(q ?? '').toLowerCase().trim();
+  if (!normalized) return [];
+  const { stories } = await loadBaseData();
+  return stories
+    .filter((story) => {
+      return (
+        story.title?.toLowerCase().includes(normalized) ||
+        story.excerpt?.toLowerCase().includes(normalized) ||
+        story.category?.toLowerCase().includes(normalized) ||
+        story.author?.toLowerCase().includes(normalized)
+      );
+    })
+    .slice(0, 20);
+}
+
 export async function getAdminDashboard() {
   const { sections, topics, stories, navigation } = await loadBaseData();
 

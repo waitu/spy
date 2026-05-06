@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown, Menu, Search } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { ChevronDown, Menu, Search, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSite } from '../context/SiteContext';
 import { sectionPath, topicPath } from '../lib/content';
@@ -8,8 +8,30 @@ import { SponbitLogo } from './SponbitLogo';
 
 export function Layout({ children }) {
   const [openSectionKey, setOpenSectionKey] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+  const navigate = useNavigate();
   const { navSections } = useSite();
   const { isAuthenticated, signout, user } = useAuth();
+
+  function openSearch() {
+    setSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  }
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setSearchQuery('');
+  }
+
+  function handleSearchSubmit(event) {
+    event.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    closeSearch();
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+  }
   const quickLinks = [
     { label: 'Home', to: '/' },
     { label: 'Shopping', to: sectionPath('shopping') },
@@ -28,9 +50,26 @@ export function Layout({ children }) {
             <SponbitLogo className="brand-svg-logo" />
           </Link>
           <div className="header-tools">
-            <button className="header-icon" type="button" aria-label="Search">
-              <Search size={18} />
-            </button>
+            {searchOpen ? (
+              <form className="header-search-form" onSubmit={handleSearchSubmit}>
+                <input
+                  ref={searchInputRef}
+                  className="header-search-input"
+                  type="search"
+                  placeholder="Search stories…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search"
+                />
+                <button className="header-icon" type="button" aria-label="Close search" onClick={closeSearch}>
+                  <X size={18} />
+                </button>
+              </form>
+            ) : (
+              <button className="header-icon" type="button" aria-label="Search" onClick={openSearch}>
+                <Search size={18} />
+              </button>
+            )}
             {isAuthenticated ? (
               <>
                 <span className="user-chip">{user.name} · {user.role}</span>

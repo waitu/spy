@@ -1422,6 +1422,14 @@ export function AdminPage() {
                         <button type="button" className="button-secondary" onClick={() => editStory(story)}>
                           Open editor
                         </button>
+                        <a
+                          href={`/story/${story.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="button-secondary"
+                        >
+                          View on site
+                        </a>
                         <button
                           type="button"
                           className="button-danger"

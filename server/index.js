@@ -144,6 +144,11 @@ app.get('/api/sections/:sectionKey/topics/:topicSlug', asyncRoute(async (request
   response.json(payload);
 }));
 
+app.get('/api/search', asyncRoute(async (request, response) => {
+  const results = await searchStories(request.query.q);
+  response.json({ results });
+}));
+
 app.get('/api/stories/:storyId', asyncRoute(async (request, response) => {
   const payload = await getStoryPageData(request.params.storyId);
   if (!payload) {

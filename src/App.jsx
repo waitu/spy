@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { useSite } from './context/SiteContext';
@@ -7,6 +8,7 @@ import { FeatureRow, PopularList, RecentList, StoryGrid, StoryMiniList } from '.
 import { NewsletterCard, SidebarBox, TopicCloud } from './components/Sidebar';
 import { useAuth } from './context/AuthContext';
 import { useApiResource } from './lib/useApiResource';
+import { fetchJson } from './lib/api';
 import { parseStoryBody, sectionPath, storyPath, toStoryImageBackground, topicPath } from './lib/content';
 import { AdminPage } from './pages/AdminPage';
 import { SignInPage, SignUpPage } from './pages/AuthPage';
@@ -501,6 +503,41 @@ function StoryPage() {
   );
 }
 
+function SearchPage() {
+  const location = useLocation();
+  const q = new URLSearchParams(location.search).get('q') ?? '';
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!q) { setResults([]); return; }
+    setLoading(true);
+    fetchJson(`/api/search?q=${encodeURIComponent(q)}`)
+      .then((data) => setResults(data.results ?? []))
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  }, [q]);
+
+  return (
+    <>
+      <PageMasthead
+        eyebrow="Search"
+        title={q ? `Results for "${q}"` : 'Search'}
+        description={loading ? 'Searching…' : `${results.length} result${results.length !== 1 ? 's' : ''} found.`}
+      />
+      <section className="site-width topic-layout">
+        <div className="topic-main">
+          {results.length > 0 ? (
+            <StoryGrid stories={results} />
+          ) : !loading && q ? (
+            <PageState title="No results" description={`Nothing matched "${q}". Try a different term.`} />
+          ) : null}
+        </div>
+      </section>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <Layout>
@@ -509,6 +546,7 @@ export default function App() {
         <Route path="/section/:sectionKey" element={<SectionPage />} />
         <Route path="/section/:sectionKey/:topicSlug" element={<TopicPage />} />
         <Route path="/story/:storyId" element={<StoryPage />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/signin" element={<GuestOnlyRoute><SignInPage /></GuestOnlyRoute>} />
         <Route path="/signup" element={<GuestOnlyRoute><SignUpPage /></GuestOnlyRoute>} />
         <Route path="/admin" element={<AdminRoute />} />
