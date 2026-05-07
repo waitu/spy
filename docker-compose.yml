@@ -32,6 +32,9 @@ services:
       DB_USER: ${DB_USER:-dailyspoon}
       DB_PASSWORD: ${DB_PASSWORD:-dailyspoon}
       DB_NAME: ${DB_NAME:-dailyspoon}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
+      ADMIN_NAME: ${ADMIN_NAME:-Sponbit Admin}
     ports:
       - '4000:4000'
     volumes:

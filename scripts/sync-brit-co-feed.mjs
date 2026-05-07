@@ -1,4 +1,13 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pool, query } from '../server/db.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.resolve(__dirname, '../server/uploads/rss-images');
+const UPLOADS_URL_PREFIX = '/api/uploads/rss-images';
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const FEED_URL = 'https://www.brit.co/feed';
 const DEFAULT_IMAGE = 'linear-gradient(135deg, #efe3d5 0%, #e0c5aa 50%, #d2b39c 100%)';
@@ -90,8 +99,24 @@ function extractTag(block, tagName) {
 }
 
 function extractMediaUrl(block) {
-  const match = block.match(/<media:content[^>]*url="([^"]+)"/i);
-  return match ? decodeEntities(match[1]).trim() : '';
+  // Try <media:content url="..."> first
+  const mediaMatch = block.match(/<media:content[^>]*url="([^"]+)"/i);
+  if (mediaMatch) return decodeEntities(mediaMatch[1]).trim();
+
+  // Try <media:thumbnail url="...">
+  const thumbMatch = block.match(/<media:thumbnail[^>]*url="([^"]+)"/i);
+  if (thumbMatch) return decodeEntities(thumbMatch[1]).trim();
+
+  // Try enclosure url
+  const enclosureMatch = block.match(/<enclosure[^>]*url="([^"]+)"/i);
+  if (enclosureMatch) return decodeEntities(enclosureMatch[1]).trim();
+
+  // Extract first <img src="..."> from description HTML
+  const rawDesc = extractTag(block, 'description');
+  const imgMatch = rawDesc.match(/<img[^>]*src="([^"]+)"/i);
+  if (imgMatch) return decodeEntities(imgMatch[1]).trim();
+
+  return '';
 }
 
 function extractCategories(block) {
@@ -228,6 +253,41 @@ function resolvePlacement(item) {
   return null;
 }
 
+async function downloadImage(url) {
+  if (!url || !url.startsWith('http')) return url;
+  try {
+    const hash = crypto.createHash('sha1').update(url).digest('hex').slice(0, 16);
+    const ext = (url.match(/\.(jpe?g|png|gif|webp|avif|svg)(\?|$)/i) ?? [])[1] ?? 'jpg';
+    const filename = `${hash}.${ext}`;
+    const filePath = path.join(UPLOADS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      const response = await fetch(url, {
+        headers: { 'user-agent': 'SponbitFeedSync/1.0' },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) return url;
+      const buffer = Buffer.from(await response.arrayBuffer());
+      fs.writeFileSync(filePath, buffer);
+    }
+    return `${UPLOADS_URL_PREFIX}/${filename}`;
+  } catch {
+    return url;
+  }
+}
+
+async function localizeBodyImages(html) {
+  const srcPattern = /<img([^>]*)src="([^"]+)"([^>]*)>/gi;
+  const matches = [...html.matchAll(srcPattern)];
+  for (const match of matches) {
+    const [full, before, src, after] = match;
+    const localSrc = await downloadImage(src);
+    if (localSrc !== src) {
+      html = html.replace(full, `<img${before}src="${localSrc}"${after}>`);
+    }
+  }
+  return html;
+}
+
 function buildExcerpt(item) {
   const text = item.description.replace(/\s+/g, ' ').trim();
   return text.length > 220 ? text.slice(0, 220).replace(/\s+\S+$/, '') + '…' : text;
@@ -236,26 +296,25 @@ function buildExcerpt(item) {
 function buildBody(item) {
   // Strip brit.co injected promo content and leading thumbnail
   const cleaned = (item.rawHtml || '')
-    .replace(/^\s*<img[^>]*>\s*(<br\s*\/?> *){0,2}\s*/i, '')
     .replace(/Free Trial for 120\+[^<]*/gi, '')
     .replace(/<a[^>]*learn\.brit\.co[^>]*>.*?<\/a>/gi, '')
     .replace(/## We value your privacy[\s\S]*?AGREE/gi, '')
-    // Remove paragraphs containing Brit+Co or brit.co (including nested tags, dotAll)
-    .replace(/<p[^>]*>(?:(?!<\/p>)[\s\S])*?(?:Brit\s*\+?\s*Co|brit\.co)[\s\S]*?<\/p>/gi, '')
+    // Remove paragraphs containing Brit+Co or brit.co but preserve any <img> tags inside
+    .replace(/<p[^>]*>((?:(?!<\/p>)[\s\S])*?(?:Brit\s*\+?\s*Co|brit\.co)[\s\S]*?)<\/p>/gi, (_, inner) => {
+      const imgs = inner.match(/<img[^>]*>/gi) ?? [];
+      return imgs.join('');
+    })
     // Remove "Keep up with all ... can't miss" trailing CTAs (with curly or straight apostrophe)
     .replace(/Keep up with all[\s\S]*?can\u2019t miss\.?/gi, '')
     .replace(/Keep up with all[\s\S]*?can't miss\.?/gi, '')
     // Remove "follow us on Facebook/Instagram/..." sentences
     .replace(/[^<]*follow us on (?:Facebook|Instagram|Twitter|social media)[^<]*/gi, '')
-    // Remove standalone brand mentions remaining in text nodes
-    .replace(/Brit\s*\+\s*Co(?:[\u2019']s)?/gi, '')
-    .replace(/brit\.co/gi, '')
     // Clean up empty tags and extra whitespace
     .replace(/<p>\s*<\/p>/gi, '')
     .replace(/<strong>\s*<\/strong>/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  const body = cleaned || `<p>${item.description.replace(/Brit\s*\+\s*Co(?:'s)?/gi, '').replace(/brit\.co/gi, '')}</p>`;
+  const body = cleaned || `<p>${item.description}</p>`;
   return body;
 }
 
@@ -274,6 +333,10 @@ async function ensureStructure() {
     alter table if exists stories
     add column if not exists is_external boolean not null default false
   `);
+
+  // Save existing images before wiping external stories so they survive re-sync
+  const savedImagesResult = await query('select id, image from stories where is_external = true');
+  const savedImages = new Map(savedImagesResult.rows.map((r) => [r.id, r.image]));
 
   await query('delete from stories where is_external = true');
   await query('delete from topics');
@@ -299,6 +362,8 @@ async function ensureStructure() {
       );
     }
   }
+
+  return savedImages;
 }
 
 async function loadTopicLookup() {
@@ -368,7 +433,7 @@ async function syncFeed({ dryRun = false } = {}) {
   await query('begin');
 
   try {
-    await ensureStructure();
+    const savedImages = await ensureStructure();
     const topicLookup = await loadTopicLookup();
 
     for (const [index, item] of items.entries()) {
@@ -376,6 +441,12 @@ async function syncFeed({ dryRun = false } = {}) {
       const featureRank = index < 4 ? index + 1 : null;
       const recentRank = index < 12 ? index + 1 : null;
       const popularRank = index < 6 ? index + 1 : null;
+      // Preserve previously saved image (e.g. manually updated) over the feed image
+      // Download cover image locally so it survives source changes
+      const rawImage = savedImages.get(item.id) ?? item.image;
+      const image = await downloadImage(rawImage);
+      // Download all inline images in body
+      const body = await localizeBodyImages(buildBody(item));
 
       await query(
         `insert into stories (
@@ -398,8 +469,8 @@ async function syncFeed({ dryRun = false } = {}) {
           item.author,
           item.publishDate,
           buildExcerpt(item),
-          item.image,
-          buildBody(item),
+          image,
+          body,
           item.link,
           true,
           4,
