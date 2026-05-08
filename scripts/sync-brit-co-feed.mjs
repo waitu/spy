@@ -298,6 +298,8 @@ function buildBody(item) {
   const cleaned = (item.rawHtml || '')
     .replace(/Free Trial for 120\+[^<]*/gi, '')
     .replace(/<a[^>]*learn\.brit\.co[^>]*>.*?<\/a>/gi, '')
+    // Unwrap all other brit.co links — keep inner text, remove the <a> wrapper
+    .replace(/<a([^>]*)href="[^"]*brit\.co[^"]*"([^>]*)>([\s\S]*?)<\/a>/gi, '$3')
     .replace(/## We value your privacy[\s\S]*?AGREE/gi, '')
     // Remove paragraphs containing Brit+Co or brit.co but preserve any <img> tags inside
     .replace(/<p[^>]*>((?:(?!<\/p>)[\s\S])*?(?:Brit\s*\+?\s*Co|brit\.co)[\s\S]*?)<\/p>/gi, (_, inner) => {
