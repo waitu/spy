@@ -334,36 +334,31 @@ async function ensureStructure() {
     add column if not exists is_external boolean not null default false
   `);
 
-  // Save existing images before wiping external stories so they survive re-sync
-  const savedImagesResult = await query('select id, image from stories where is_external = true');
-  const savedImages = new Map(savedImagesResult.rows.map((r) => [r.id, r.image]));
-
-  await query('delete from stories where is_external = true');
-  await query('delete from topics');
-  await query('delete from sections');
-
+  // Upsert sections (preserve existing, add missing)
   for (const [key, label, description, position] of SECTION_DEFINITIONS) {
     await query(
       `insert into sections (key, label, description, position)
-       values ($1, $2, $3, $4)`,
+       values ($1, $2, $3, $4)
+       on conflict (key) do update set label = $2, description = $3, position = $4`,
       [key, label, description, position]
     );
   }
 
+  // Upsert topics (preserve existing, add missing)
   for (const [sectionKey, topics] of Object.entries(TOPIC_DEFINITIONS)) {
     const sectionResult = await query('select id from sections where key = $1', [sectionKey]);
     const sectionId = sectionResult.rows[0]?.id;
+    if (!sectionId) continue;
 
     for (const [index, [slug, label]] of topics.entries()) {
       await query(
         `insert into topics (section_id, slug, label, description, position)
-         values ($1, $2, $3, $4, $5)`,
+         values ($1, $2, $3, $4, $5)
+         on conflict (section_id, slug) do update set label = $3, position = $5`,
         [sectionId, slug, label, `${label} coverage imported from external source metadata.`, index + 1]
       );
     }
   }
-
-  return savedImages;
 }
 
 async function loadTopicLookup() {
@@ -433,22 +428,21 @@ async function syncFeed({ dryRun = false } = {}) {
   await query('begin');
 
   try {
-    const savedImages = await ensureStructure();
+    await ensureStructure();
     const topicLookup = await loadTopicLookup();
 
+    let inserted = 0;
     for (const [index, item] of items.entries()) {
       const topic = topicLookup.get(`${item.sectionKey}:${item.topicSlug}`);
       const featureRank = index < 4 ? index + 1 : null;
       const recentRank = index < 12 ? index + 1 : null;
       const popularRank = index < 6 ? index + 1 : null;
-      // Preserve previously saved image (e.g. manually updated) over the feed image
-      // Download cover image locally so it survives source changes
-      const rawImage = savedImages.get(item.id) ?? item.image;
-      const image = await downloadImage(rawImage);
+      // Download cover image locally
+      const image = await downloadImage(item.image);
       // Download all inline images in body
       const body = await localizeBodyImages(buildBody(item));
 
-      await query(
+      const result = await query(
         `insert into stories (
           id, section_id, topic_id, title, category, author, publish_date, excerpt, image, body,
           source_url, is_external,
@@ -480,10 +474,11 @@ async function syncFeed({ dryRun = false } = {}) {
           index === 0,
         ]
       );
+      if (result.rowCount > 0) inserted++;
     }
 
     await query('commit');
-    console.log(`Imported ${items.length} stories.`);
+    console.log(`Sync complete: ${inserted} new stories added (${items.length - inserted} already existed).`);
   } catch (error) {
     await query('rollback');
     throw error;
