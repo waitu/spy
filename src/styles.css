@@ -1774,7 +1774,8 @@ blockquote {
 
 @media (max-width: 760px) {
   .header-menu-btn {
-    display: flex;
+    display: grid;
+    place-items: center;
   }
 
   .header-nav-wrap {
