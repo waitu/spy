@@ -1,10 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { PageMasthead } from '../components/HeroSection';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useSite } from '../context/SiteContext';
 import { fetchJson, getAuthToken } from '../lib/api';
 import { toDateInputValue } from '../lib/content';
 import { useApiResource } from '../lib/useApiResource';
+
+function exportStoriesToXlsx(stories) {
+  const origin = window.location.origin;
+  const rows = stories.map((story) => ({
+    URL: `${origin}/story/${story.id}`,
+    Section: story.sectionLabel ?? '',
+    Category: story.category ?? '',
+    'Publish Date': story.date ?? '',
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Stories');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(workbook, `stories-${date}.xlsx`);
+}
 
 const viewOptions = [
   { key: 'sections', label: 'Sections' },
@@ -1327,6 +1345,11 @@ export function AdminPage() {
             <AdminPanel
               title="Story library"
               description="Search by title, author, category, section, or topic. The list is paged so you never need to scroll through everything at once."
+              actions={
+                <button type="button" className="button-secondary" onClick={() => exportStoriesToXlsx(stories)}>
+                  Download XLSX
+                </button>
+              }
               className="admin-panel--library"
             >
               <div className="admin-library-toolbar admin-library-toolbar--filters">
