@@ -270,6 +270,34 @@ textarea {
   background: #faf6f1;
 }
 
+.nav-dropdown__menu--more {
+  min-width: 320px;
+  columns: 2;
+  column-gap: 0;
+  padding: 12px 0;
+}
+
+.nav-dropdown__more-group {
+  break-inside: avoid;
+  padding-bottom: 8px;
+}
+
+.nav-dropdown__link--group-title {
+  font-weight: 700;
+  border-bottom: none;
+  padding-bottom: 4px;
+  padding-top: 12px;
+  color: var(--text);
+}
+
+.nav-dropdown__link--sub {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 36px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .nav-dropdown__trigger.active .primary-nav__item,
 .nav-dropdown__trigger.active .nav-dropdown__toggle,
 .nav-dropdown__trigger:hover .primary-nav__item,

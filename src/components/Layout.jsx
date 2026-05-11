@@ -6,6 +6,9 @@ import { useSite } from '../context/SiteContext';
 import { sectionPath, topicPath } from '../lib/content';
 import { SponbitLogo } from './SponbitLogo';
 
+const PRIMARY_NAV_LIMIT = 6;
+const MORE_KEY = '__more__';
+
 export function Layout({ children }) {
   const [openSectionKey, setOpenSectionKey] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -15,6 +18,9 @@ export function Layout({ children }) {
   const navigate = useNavigate();
   const { navSections } = useSite();
   const { isAuthenticated, signout, user } = useAuth();
+
+  const primarySections = navSections.slice(0, PRIMARY_NAV_LIMIT);
+  const moreSections = navSections.slice(PRIMARY_NAV_LIMIT);
 
   function openSearch() {
     setSearchOpen(true);
@@ -88,7 +94,7 @@ export function Layout({ children }) {
 
         <div className="header-nav-wrap">
           <nav className="primary-nav site-width" aria-label="Sections">
-            {navSections.map((section) => (
+            {primarySections.map((section) => (
               <div
                 key={section.key}
                 className="nav-dropdown"
@@ -138,6 +144,59 @@ export function Layout({ children }) {
                 )}
               </div>
             ))}
+
+            {moreSections.length > 0 && (
+              <div
+                className="nav-dropdown"
+                onMouseEnter={() => setOpenSectionKey(MORE_KEY)}
+                onMouseLeave={() => setOpenSectionKey((current) => (current === MORE_KEY ? null : current))}
+                onFocus={() => setOpenSectionKey(MORE_KEY)}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setOpenSectionKey((current) => (current === MORE_KEY ? null : current));
+                  }
+                }}
+              >
+                <div className={openSectionKey === MORE_KEY ? 'nav-dropdown__trigger active' : 'nav-dropdown__trigger'}>
+                  <button
+                    className="primary-nav__item nav-dropdown__toggle"
+                    type="button"
+                    aria-label="More sections"
+                    aria-expanded={openSectionKey === MORE_KEY}
+                    onClick={() => setOpenSectionKey((current) => (current === MORE_KEY ? null : MORE_KEY))}
+                  >
+                    <span>More</span>
+                    <ChevronDown size={14} strokeWidth={2.2} />
+                  </button>
+                </div>
+
+                {openSectionKey === MORE_KEY && (
+                  <div className="nav-dropdown__menu nav-dropdown__menu--more" aria-label="More sections">
+                    {moreSections.map((section) => (
+                      <div key={section.key} className="nav-dropdown__more-group">
+                        <Link
+                          className="nav-dropdown__link nav-dropdown__link--group-title"
+                          to={section.path}
+                          onClick={() => setOpenSectionKey(null)}
+                        >
+                          {section.label}
+                        </Link>
+                        {section.items.map((item) => (
+                          <Link
+                            key={item.slug}
+                            className="nav-dropdown__link nav-dropdown__link--sub"
+                            to={topicPath(section.key, item.slug)}
+                            onClick={() => setOpenSectionKey(null)}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
           <nav className="utility-nav site-width" aria-label="Quick pages">
             {quickLinks.map((link) => (
