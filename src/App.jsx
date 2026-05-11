@@ -209,8 +209,8 @@ function SectionPage() {
     return <PageState title="Section unavailable" description={error.message} />;
   }
 
-  if (!data?.section || !data.lead) {
-    return <Navigate replace to="/" />;
+  if (!data?.section) {
+    return <PageState title="Section not found" description="This section does not exist or has been removed." />;
   }
 
   return (
@@ -221,7 +221,9 @@ function SectionPage() {
         title={data.section.label}
         description={data.section.description}
       />
-      <HeroSection lead={data.lead} secondary={data.secondary} />
+      {data.lead ? <HeroSection lead={data.lead} secondary={data.secondary} /> : (
+        <div className="site-width"><PageState title="No stories yet" description="Stories will appear here once content is published in this section." /></div>
+      )}
       <TopicDirectory section={data.section} />
       <section className="content-layout site-width">
         <div className="content-main wide">
@@ -272,8 +274,8 @@ function TopicPage() {
     return <PageState title="Topic unavailable" description={error.message} />;
   }
 
-  if (!data?.topic || !data.lead) {
-    return <Navigate replace to="/" />;
+  if (!data?.topic) {
+    return <PageState title="Topic not found" description="This topic does not exist or has been removed." />;
   }
 
   return (
@@ -284,7 +286,9 @@ function TopicPage() {
         title={data.topic.label}
         description={`${data.topic.label} is a live topic page inside the ${data.section.label} channel.`}
       />
-      <HeroSection lead={data.lead} secondary={data.secondary} />
+      {data.lead ? <HeroSection lead={data.lead} secondary={data.secondary} /> : (
+        <div className="site-width"><PageState title="No stories yet" description="Stories will appear here once content is published in this topic." /></div>
+      )}
       <section className="category-hero site-width">
         <div className="category-hero__main story-surface">
           <span className="eyebrow">Inside {data.section.label}</span>

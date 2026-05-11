@@ -132,7 +132,7 @@ function parseFeed(xml) {
     // Skip articles that link outside mothership.sg
     if (!isMothership(link)) return null;
 
-    const rawDescription = extractRawTag(block, 'description');
+    const rawDescription = extractTag(block, 'description');
 
     return {
       id: `ms-${slugFromUrl(link)}`,
@@ -171,9 +171,9 @@ function resolvePlacement(item) {
     return ['food', 'food-news-and-menu-updates'];
   }
 
-  // Travel
+  // Travel — only explicit travel categories or unambiguous travel-intent titles
   if (hasAny(cats, ['travel', 'overseas', 'tourism'])) return ['travel', 'travel'];
-  if (hasAnyPartial([title], ['travel', 'flight', 'airport', 'hotel', 'cruise', 'holiday', 'visa', 'batam', 'johor', 'bali'])) {
+  if (hasAnyPartial([title], ['travel guide', 'best hotels', 'things to do in', 'road trip', 'travel tips', 'travel hack'])) {
     return ['travel', 'travel'];
   }
 
