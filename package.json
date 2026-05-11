@@ -11,6 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "sync:external": "node scripts/sync-brit-co-feed.mjs",
+    "sync:mothership": "node scripts/sync-mothership-feed.mjs",
+    "sync:all": "node scripts/sync-brit-co-feed.mjs ; node scripts/sync-mothership-feed.mjs",
     "seed:starter": "node scripts/seed-starter-content.mjs",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
