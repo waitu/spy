@@ -73,10 +73,12 @@ function extractRawTag(block, tagName) {
 }
 
 function extractPrimaryImage(block) {
-  // mothership uses <img class="type:primaryImage" src="..."/> in description
-  const rawDesc = extractRawTag(block, 'description');
-  const primaryMatch = rawDesc.match(/<img[^>]*class="type:primaryImage"[^>]*src="([^"]+)"/i)
-    ?? rawDesc.match(/<img[^>]*src="([^"]+)"[^>]*class="type:primaryImage"/i);
+  // mothership uses <img class="type:primaryImage" src="..."/> in description/content
+  const rawDesc = extractTag(block, 'description');
+  const rawContent = extractTag(block, 'content:encoded') || rawDesc;
+
+  const primaryMatch = rawContent.match(/<img[^>]*class="type:primaryImage"[^>]*src="([^"]+)"/i)
+    ?? rawContent.match(/<img[^>]*src="([^"]+)"[^>]*class="type:primaryImage"/i);
   if (primaryMatch) return decodeEntities(primaryMatch[1]).trim();
 
   // media:content / media:thumbnail
@@ -86,8 +88,9 @@ function extractPrimaryImage(block) {
   const thumbMatch = block.match(/<media:thumbnail[^>]*url="([^"]+)"/i);
   if (thumbMatch) return decodeEntities(thumbMatch[1]).trim();
 
-  // fallback: first img in description
-  const imgMatch = rawDesc.match(/<img[^>]*src="([^"]+)"/i);
+  // fallback: first img anywhere in content or description
+  const imgMatch = rawContent.match(/<img[^>]*src="(https?:\/\/[^"]+)"/i)
+    ?? rawDesc.match(/<img[^>]*src="(https?:\/\/[^"]+)"/i);
   if (imgMatch) return decodeEntities(imgMatch[1]).trim();
 
   return '';
@@ -133,6 +136,7 @@ function parseFeed(xml) {
     if (!isMothership(link)) return null;
 
     const rawDescription = extractTag(block, 'description');
+    const rawContent = extractTag(block, 'content:encoded') || rawDescription;
 
     return {
       id: `ms-${slugFromUrl(link)}`,
@@ -143,7 +147,7 @@ function parseFeed(xml) {
       categories: extractCategories(block),
       image: extractPrimaryImage(block) || DEFAULT_IMAGE,
       description: stripHtml(rawDescription),
-      rawHtml: rawDescription,
+      rawHtml: rawContent,
     };
   }).filter((item) => item && item.title && item.link && item.publishDate);
 }
