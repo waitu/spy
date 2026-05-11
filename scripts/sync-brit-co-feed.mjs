@@ -9,7 +9,7 @@ const UPLOADS_DIR = path.resolve(__dirname, '../server/uploads/rss-images');
 const UPLOADS_URL_PREFIX = '/api/uploads/rss-images';
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-const FEED_URL = 'https://www.brit.co/feed';
+const FEED_URL = 'https://www.brit.co/feed/?posts_per_page=100';
 const DEFAULT_IMAGE = 'linear-gradient(135deg, #efe3d5 0%, #e0c5aa 50%, #d2b39c 100%)';
 
 const SECTION_DEFINITIONS = [
@@ -385,14 +385,14 @@ function selectImportableItems(feedItems) {
 
     const key = placement.join(':');
     const count = perTopicCounts.get(key) ?? 0;
-    if (count >= 4) {
+    if (count >= 8) {
       continue;
     }
 
     perTopicCounts.set(key, count + 1);
     selected.push({ ...item, sectionKey: placement[0], topicSlug: placement[1] });
 
-    if (selected.length >= 28) {
+    if (selected.length >= 80) {
       break;
     }
   }

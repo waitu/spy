@@ -9,7 +9,7 @@ const UPLOADS_DIR = path.resolve(__dirname, '../server/uploads/rss-images');
 const UPLOADS_URL_PREFIX = '/api/uploads/rss-images';
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-const FEED_URL = 'https://mothership.sg/feed/';
+const FEED_URL = 'https://mothership.sg/feed/?posts_per_page=100';
 const DEFAULT_IMAGE = 'linear-gradient(135deg, #d0e8f5 0%, #b3d4e8 50%, #90bcd6 100%)';
 const SOURCE_DOMAIN = 'mothership.sg';
 
@@ -346,12 +346,12 @@ function selectImportableItems(feedItems) {
 
     const key = placement.join(':');
     const count = perTopicCounts.get(key) ?? 0;
-    if (count >= 5) continue;
+    if (count >= 8) continue;
 
     perTopicCounts.set(key, count + 1);
     selected.push({ ...item, sectionKey: placement[0], topicSlug: placement[1] });
 
-    if (selected.length >= 40) break;
+    if (selected.length >= 80) break;
   }
 
   return selected;
