@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "sync:external": "node scripts/sync-brit-co-feed.mjs",
     "sync:mothership": "node scripts/sync-mothership-feed.mjs",
-    "sync:all": "node scripts/sync-brit-co-feed.mjs ; node scripts/sync-mothership-feed.mjs",
+    "sync:cnn": "node scripts/sync-cnn-feed.mjs",
+    "sync:foxnews": "node scripts/sync-foxnews-feed.mjs",
+    "sync:all": "node scripts/sync-brit-co-feed.mjs ; node scripts/sync-mothership-feed.mjs ; node scripts/sync-cnn-feed.mjs ; node scripts/sync-foxnews-feed.mjs",
     "seed:starter": "node scripts/seed-starter-content.mjs",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"

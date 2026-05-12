@@ -9,7 +9,14 @@ const UPLOADS_DIR = path.resolve(__dirname, '../server/uploads/rss-images');
 const UPLOADS_URL_PREFIX = '/api/uploads/rss-images';
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-const FEED_URL = 'https://www.brit.co/feed/?posts_per_page=100';
+const FEED_URLS = [
+  'https://www.brit.co/feed/?posts_per_page=100',
+  'https://www.brit.co/feeds/self-care/beauty-skin-care/hair.rss',
+  'https://www.brit.co/feeds/self-care/beauty-skin-care.rss',
+  'https://www.brit.co/feeds/self-care/health.rss',
+  'https://www.brit.co/feeds/entertainment.rss',
+  'https://www.brit.co/feeds/travel.rss',
+];
 const DEFAULT_IMAGE = 'linear-gradient(135deg, #efe3d5 0%, #e0c5aa 50%, #d2b39c 100%)';
 
 const SECTION_DEFINITIONS = [
@@ -174,6 +181,15 @@ function resolvePlacement(item) {
     return ['shopping', 'home-decor'];
   }
 
+  // Self-care specifics checked before editecom so hair/makeup product articles stay in self-care
+  if (hasAny(categories, ['hair', 'hair care', 'haircare'])) {
+    return ['self-care', 'hair'];
+  }
+
+  if (hasAny(categories, ['makeup'])) {
+    return ['self-care', 'makeup'];
+  }
+
   if (hasAny(categories, ['gift guide', 'gift ideas', 'gifts', 'gifts for her', 'gifts for moms', "mother's day gifts", 'editecom'])) {
     return ['shopping', 'gift-guides'];
   }
@@ -192,14 +208,6 @@ function resolvePlacement(item) {
 
   if (hasAny(categories, ['recipes', 'recipe', 'cinco de mayo recipes'])) {
     return ['food', 'recipes'];
-  }
-
-  if (hasAny(categories, ['hair'])) {
-    return ['self-care', 'hair'];
-  }
-
-  if (hasAny(categories, ['makeup'])) {
-    return ['self-care', 'makeup'];
   }
 
   if (hasAny(categories, ['beauty', 'wellness', 'health', 'womens health'])) {
@@ -400,23 +408,32 @@ function selectImportableItems(feedItems) {
   return selected;
 }
 
-async function syncFeed({ dryRun = false } = {}) {
-  const response = await fetch(FEED_URL, {
+async function fetchFeed(url) {
+  const response = await fetch(url, {
     headers: {
       'user-agent': 'SponbitFeedSync/1.0 (+https://www.brit.co/feed)',
       accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
     },
+    signal: AbortSignal.timeout(20000),
   });
+  if (!response.ok) throw new Error(`${url}: ${response.status} ${response.statusText}`);
+  return response.text();
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+async function syncFeed({ dryRun = false } = {}) {
+  const xmlResults = await Promise.allSettled(FEED_URLS.map(fetchFeed));
+  const allParsed = [];
+  for (const [i, result] of xmlResults.entries()) {
+    if (result.status === 'rejected') {
+      console.warn(`Failed to fetch ${FEED_URLS[i]}:`, result.reason.message);
+      continue;
+    }
+    allParsed.push(...parseFeed(result.value));
   }
-
-  const xml = await response.text();
-  const items = selectImportableItems(parseFeed(xml));
+  const items = selectImportableItems(allParsed);
 
   if (dryRun) {
-    console.log(`Parsed ${items.length} importable stories from ${FEED_URL}`);
+    console.log(`Parsed ${items.length} importable stories from ${FEED_URLS.length} feeds`);
     console.table(items.slice(0, 10).map((item) => ({
       id: item.id,
       section: item.sectionKey,
