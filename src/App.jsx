@@ -342,20 +342,154 @@ function isExternalHref(value) {
   return /^https?:\/\//i.test(String(value ?? '').trim());
 }
 
+function absolutizeUrl(value) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized || typeof window === 'undefined') {
+    return normalized;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  return new URL(normalized, window.location.origin).toString();
+}
+
+function ShareGlyph({ kind }) {
+  if (kind === 'facebook') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M13.5 21v-7h2.4l.4-3h-2.8V9.1c0-.9.3-1.6 1.7-1.6H16V4.9c-.4-.1-1.3-.2-2.4-.2-2.4 0-4.1 1.5-4.1 4.3V11H7v3h2.5v7h4Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (kind === 'x') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M17.2 3H21l-8.3 9.5L22 21h-7.2l-5.6-6.6L3.4 21H.9l8.9-10.1L1 3h7.3l5 6 3.9-6ZM16 19h2l-11-14H5l11 14Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (kind === 'pinterest') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 3a9 9 0 0 0-3.2 17.4c0-.8 0-2 .2-2.8l1.3-5.4s-.3-.7-.3-1.8c0-1.7 1-3 2.3-3 1.1 0 1.6.8 1.6 1.8 0 1.1-.7 2.8-1.1 4.4-.3 1.3.7 2.3 1.9 2.3 2.3 0 3.8-2.9 3.8-6.3 0-2.6-1.8-4.6-5-4.6-3.6 0-5.8 2.7-5.8 5.7 0 1 .3 1.8.8 2.4.2.2.2.3.1.6l-.3 1.1c-.1.4-.4.5-.7.3-1.8-.7-2.7-2.7-2.7-4.8 0-3.6 3-7.9 9.1-7.9 4.9 0 8.2 3.5 8.2 7.3 0 5-2.8 8.7-7 8.7-1.4 0-2.7-.7-3.1-1.5l-.9 3.3c-.3 1.1-.9 2.3-1.5 3.1.9.3 1.8.5 2.8.5a9 9 0 1 0 0-18Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Zm2 .5v.2l6 4.5 6-4.5V7h-12Zm12 2.7-5.4 4a1 1 0 0 1-1.2 0L6 9.7V17h12V9.7Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function StoryShareActions({ story }) {
+  const storyUrl = absolutizeUrl(story.path);
+  const storyImage = absolutizeUrl(story.image);
+  const title = String(story.title ?? '').trim();
+  const shareText = [title, story.excerpt].filter(Boolean).join(' - ');
+  const encodedUrl = encodeURIComponent(storyUrl);
+  const encodedTitle = encodeURIComponent(title);
+  const encodedText = encodeURIComponent(shareText);
+  const encodedImage = encodeURIComponent(storyImage);
+
+  const links = [
+    {
+      key: 'facebook',
+      label: 'Facebook',
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    },
+    {
+      key: 'x',
+      label: 'X',
+      href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
+    },
+    {
+      key: 'pinterest',
+      label: 'Pinterest',
+      href: `https://www.pinterest.com/pin/create/button/?url=${encodedUrl}&media=${encodedImage}&description=${encodedText}`,
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      href: `mailto:?subject=${encodedTitle}&body=${encodedText}%0A%0A${encodedUrl}`,
+    },
+  ];
+
+  return (
+    <div className="story-share" aria-label="Share this story">
+      <span className="story-share__label">Share</span>
+      <div className="story-share__actions">
+        {links.map((item) => (
+          <a
+            key={item.key}
+            className={`story-share__link story-share__link--${item.key}`}
+            href={item.href}
+            target={item.key === 'email' ? undefined : '_blank'}
+            rel={item.key === 'email' ? undefined : 'noreferrer'}
+            aria-label={`Share on ${item.label}`}
+            title={`Share on ${item.label}`}
+          >
+            <span className="story-share__icon">
+              <ShareGlyph kind={item.key} />
+            </span>
+            <span className="story-share__text">{item.label}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function looksLikeRichHtml(value) {
   return /<\/?(p|h2|h3|ul|ol|li|blockquote|a|img|strong|em)\b/i.test(String(value ?? ''));
 }
 
-function sanitizeStoryHtml(value) {
-  return DOMPurify.sanitize(String(value ?? ''), {
+function normalizeComparableImageUrl(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/^url\(["']?/, '')
+    .replace(/["']?\)$/, '')
+    .replace(/^https?:\/\/[^/]+/i, '')
+    .replace(/[?#].*$/, '')
+    .replace(/\/+$/, '');
+}
+
+function removeDuplicateLeadingCoverImage(value, coverImage) {
+  const html = String(value ?? '').trim();
+  const normalizedCover = normalizeComparableImageUrl(coverImage);
+
+  if (!html || !normalizedCover) {
+    return html;
+  }
+
+  const leadingImageMatch = html.match(/^\s*<img[^>]*src="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*){0,2}/i);
+  if (!leadingImageMatch) {
+    return html;
+  }
+
+  const normalizedLeadingImage = normalizeComparableImageUrl(leadingImageMatch[1]);
+  if (!normalizedLeadingImage || normalizedLeadingImage !== normalizedCover) {
+    return html;
+  }
+
+  return html.slice(leadingImageMatch[0].length).trimStart();
+}
+
+function sanitizeStoryHtml(value, coverImage) {
+  return DOMPurify.sanitize(removeDuplicateLeadingCoverImage(value, coverImage), {
     ALLOWED_TAGS: ['p', 'br', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'strong', 'em'],
     ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel'],
   });
 }
 
-function StoryBodyBlocks({ body }) {
+function StoryBodyBlocks({ body, coverImage }) {
   if (looksLikeRichHtml(body)) {
-    return <div className="article-rich-html" dangerouslySetInnerHTML={{ __html: sanitizeStoryHtml(body) }} />;
+    return <div className="article-rich-html" dangerouslySetInnerHTML={{ __html: sanitizeStoryHtml(body, coverImage) }} />;
   }
 
   const blocks = parseStoryBody(body);
@@ -489,12 +623,13 @@ function StoryPage() {
             <span>{data.story.readMinutes} min read</span>
           </div>
           <p className="article-lead">{data.story.excerpt}</p>
+          <StoryShareActions story={data.story} />
         </article>
         <div className="article-visual" style={{ '--story-image': toStoryImageBackground(data.story.image) }} />
       </section>
       <section className="article-layout site-width">
         <article className="article-body story-surface">
-          <StoryBodyBlocks body={data.story.body} />
+          <StoryBodyBlocks body={data.story.body} coverImage={data.story.image} />
         </article>
         <aside className="content-sidebar">
           <SidebarBox title="Related Stories">

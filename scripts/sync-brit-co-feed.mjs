@@ -296,6 +296,33 @@ async function localizeBodyImages(html) {
   return html;
 }
 
+function normalizeComparableImageUrl(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/^https?:\/\/[^/]+/i, '')
+    .replace(/[?#].*$/, '')
+    .replace(/\/+$/, '');
+}
+
+function removeDuplicateLeadingCoverImage(html, coverImage) {
+  const normalizedCover = normalizeComparableImageUrl(coverImage);
+  if (!html || !normalizedCover) {
+    return html;
+  }
+
+  const leadingImageMatch = String(html).match(/^\s*<img[^>]*src="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*){0,2}/i);
+  if (!leadingImageMatch) {
+    return html;
+  }
+
+  const normalizedLeadingImage = normalizeComparableImageUrl(leadingImageMatch[1]);
+  if (normalizedLeadingImage !== normalizedCover) {
+    return html;
+  }
+
+  return String(html).slice(leadingImageMatch[0].length).trimStart();
+}
+
 function buildExcerpt(item) {
   const text = item.description.replace(/\s+/g, ' ').trim();
   return text.length > 220 ? text.slice(0, 220).replace(/\s+\S+$/, '') + '…' : text;
@@ -306,8 +333,10 @@ function buildBody(item) {
   const cleaned = (item.rawHtml || '')
     .replace(/Free Trial for 120\+[^<]*/gi, '')
     .replace(/<a[^>]*learn\.brit\.co[^>]*>.*?<\/a>/gi, '')
+    .replace(/<a[^>]*href="https?:\/\/(?:www\.)?facebook\.com\/britandco\/?"[^>]*>[\s\S]*?<\/a>/gi, '')
     // Unwrap all other brit.co links — keep inner text, remove the <a> wrapper
     .replace(/<a([^>]*)href="[^"]*brit\.co[^"]*"([^>]*)>([\s\S]*?)<\/a>/gi, '$3')
+    .replace(/https?:\/\/(?:www\.)?facebook\.com\/britandco\/?/gi, '')
     .replace(/## We value your privacy[\s\S]*?AGREE/gi, '')
     // Remove paragraphs containing Brit+Co or brit.co but preserve any <img> tags inside
     .replace(/<p[^>]*>((?:(?!<\/p>)[\s\S])*?(?:Brit\s*\+?\s*Co|brit\.co)[\s\S]*?)<\/p>/gi, (_, inner) => {
@@ -324,7 +353,7 @@ function buildBody(item) {
     .replace(/<strong>\s*<\/strong>/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  const body = cleaned || `<p>${item.description}</p>`;
+  const body = removeDuplicateLeadingCoverImage(cleaned || `<p>${item.description}</p>`, item.image);
   return body;
 }
 
