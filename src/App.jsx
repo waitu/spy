@@ -677,6 +677,81 @@ function SearchPage() {
   );
 }
 
+function PrivacyPolicyPage() {
+  return (
+    <>
+      <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Privacy Policy' }]} />
+      <PageMasthead
+        eyebrow="Legal"
+        title="Privacy Policy"
+        description="How Sponbit collects, uses, and protects information across the website and connected publishing tools."
+      />
+      <section className="site-width topic-layout">
+        <article className="topic-main page-state story-surface">
+          <p><strong>Effective date:</strong> May 14, 2026</p>
+          <p>
+            Sponbit.com collects limited information needed to operate the website, measure traffic, manage accounts,
+            and publish content to connected services such as Pinterest.
+          </p>
+
+          <h2>Information We Collect</h2>
+          <p>
+            We may collect basic usage data such as browser type, pages viewed, referring pages, approximate location,
+            and device information through analytics tools. If you create an account or contact us, we may also collect
+            your name, email address, and the information you provide directly.
+          </p>
+
+          <h2>How We Use Information</h2>
+          <p>We use information to operate the website, improve content, maintain security, manage admin access, and understand site performance.</p>
+          <p>
+            If you authorize a third-party connection such as Pinterest, we use the granted access only to support content publishing,
+            scheduling, board selection, and related reporting inside the Sponbit admin tools.
+          </p>
+
+          <h2>Pinterest API Data</h2>
+          <p>
+            When Sponbit is connected to Pinterest, the site may access account profile details, boards, pins, and related metadata
+            required to create, schedule, publish, or review pins. This access is used solely for operating Sponbit-owned publishing workflows.
+          </p>
+          <p>
+            We do not sell Pinterest data or use it for unrelated advertising purposes. Connected account access can be revoked at any time
+            through Pinterest account settings or by contacting us.
+          </p>
+
+          <h2>Cookies and Analytics</h2>
+          <p>
+            Sponbit uses cookies and similar technologies for analytics, site performance measurement, and tag management. These tools help us
+            understand how visitors use the website and improve the experience.
+          </p>
+
+          <h2>Sharing of Information</h2>
+          <p>
+            We do not sell personal information. We may share limited data with service providers that help operate the website,
+            such as hosting, analytics, authentication, database, and publishing platform providers, only as needed to run the service.
+          </p>
+
+          <h2>Data Retention and Security</h2>
+          <p>
+            We retain information only for as long as necessary to operate the website, maintain records, comply with legal obligations,
+            and secure the service. We use reasonable administrative and technical measures to protect data, but no system is completely secure.
+          </p>
+
+          <h2>Your Choices</h2>
+          <p>
+            You may limit analytics through browser settings, request removal of account-related information where applicable,
+            and revoke third-party app permissions directly from the connected platform.
+          </p>
+
+          <h2>Contact</h2>
+          <p>
+            For privacy questions, contact Sponbit at <a href="mailto:privacy@sponbit.com">privacy@sponbit.com</a>.
+          </p>
+        </article>
+      </section>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <Layout>
@@ -686,6 +761,7 @@ export default function App() {
         <Route path="/section/:sectionKey/:topicSlug" element={<TopicPage />} />
         <Route path="/story/:storyId" element={<StoryPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/signin" element={<GuestOnlyRoute><SignInPage /></GuestOnlyRoute>} />
         <Route path="/signup" element={<GuestOnlyRoute><SignUpPage /></GuestOnlyRoute>} />
         <Route path="/admin" element={<AdminRoute />} />

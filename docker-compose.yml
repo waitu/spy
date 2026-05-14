@@ -35,6 +35,10 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
       ADMIN_NAME: ${ADMIN_NAME:-Sponbit Admin}
+      PINTEREST_CLIENT_ID: ${PINTEREST_CLIENT_ID:-}
+      PINTEREST_CLIENT_SECRET: ${PINTEREST_CLIENT_SECRET:-}
+      PINTEREST_REDIRECT_URI: ${PINTEREST_REDIRECT_URI:-https://sponbit.com/api/admin/pinterest/callback}
+      SITE_ORIGIN: ${SITE_ORIGIN:-https://sponbit.com}
     ports:
       - '4000:4000'
     volumes:

@@ -254,6 +254,7 @@ export function Layout({ children }) {
           <div>
             <SponbitLogo className="footer-svg-logo" />
             <p>Food, culture & modern lifestyle.</p>
+            <Link to="/privacy">Privacy Policy</Link>
           </div>
           <div>
             <h4>Channels</h4>

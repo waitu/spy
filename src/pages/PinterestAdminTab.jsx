@@ -1,32 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
-import { fetchJson, getAuthToken } from '../lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchJson } from '../lib/api';
 
 const SITE_ORIGIN = window.location.origin;
-
-function formatDateTime(value) {
-  if (!value) return '—';
-  const d = new Date(value);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-}
-
-function statusBadge(status) {
-  const map = { draft: '#888', scheduled: '#0070f3', posted: '#22a34a', failed: '#d0342c' };
-  return (
-    <span style={{
-      background: map[status] ?? '#888',
-      color: '#fff',
-      fontSize: '0.7rem',
-      padding: '2px 8px',
-      borderRadius: 12,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-    }}>
-      {status}
-    </span>
-  );
-}
 
 const emptyPin = {
   storyId: '',
@@ -40,402 +15,874 @@ const emptyPin = {
   scheduledAt: '',
 };
 
+function normalizeText(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function absoluteUrl(value) {
+  if (!value) return '';
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  return `${SITE_ORIGIN}${value.startsWith('/') ? value : `/${value}`}`;
+}
+
+function storyDestination(story) {
+  if (!story) return '';
+  return absoluteUrl(story.path ?? `/story/${story.id}`);
+}
+
+function storyImage(story) {
+  return absoluteUrl(story?.image ?? '');
+}
+
+function createPinFromStory(story, boardState = {}) {
+  if (!story) {
+    return {
+      ...emptyPin,
+      boardId: boardState.boardId ?? '',
+      boardName: boardState.boardName ?? '',
+    };
+  }
+
+  return {
+    ...emptyPin,
+    boardId: boardState.boardId ?? '',
+    boardName: boardState.boardName ?? '',
+    storyId: story.id,
+    title: story.title ?? '',
+    description: story.excerpt ?? '',
+    link: storyDestination(story),
+    imageUrl: storyImage(story),
+    altText: story.title ?? '',
+  };
+}
+
+function truncateText(value, limit = 140) {
+  const text = String(value ?? '').trim();
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit - 1).trim()}...`;
+}
+
+function buildStorySummary(story, pins) {
+  const storyPins = pins.filter((pin) => pin.story_id === story.id);
+  const postedCount = storyPins.filter((pin) => pin.status === 'posted').length;
+  const scheduledCount = storyPins.filter((pin) => pin.status === 'scheduled').length;
+  const draftCount = storyPins.filter((pin) => pin.status === 'draft').length;
+  const failedCount = storyPins.filter((pin) => pin.status === 'failed').length;
+  const latestPin = [...storyPins].sort((left, right) => new Date(right.updated_at ?? right.created_at ?? 0) - new Date(left.updated_at ?? left.created_at ?? 0))[0] ?? null;
+  const boards = [...new Set(storyPins.map((pin) => pin.board_name).filter(Boolean))];
+
+  return {
+    story,
+    pins: storyPins,
+    pinCount: storyPins.length,
+    postedCount,
+    scheduledCount,
+    draftCount,
+    failedCount,
+    boards,
+    latestPin,
+    hasAnyPin: storyPins.length > 0,
+    hasPostedPin: postedCount > 0,
+    hasQueuedPin: scheduledCount > 0 || draftCount > 0 || failedCount > 0,
+  };
+}
+
+function statusBadge(status) {
+  const map = {
+    draft: '#8a8175',
+    scheduled: '#2867d0',
+    posted: '#1f8c45',
+    failed: '#c54535',
+  };
+
+  return (
+    <span
+      style={{
+        background: map[status] ?? '#8a8175',
+        color: '#fff',
+        fontSize: '0.72rem',
+        padding: '5px 10px',
+        borderRadius: 999,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+function MetricCard({ value, label, note }) {
+  return (
+    <article className="admin-overview-card story-surface">
+      <strong>{value}</strong>
+      <p>{label}</p>
+      {note ? <span className="pinterest-admin__metric-note">{note}</span> : null}
+    </article>
+  );
+}
+
 export function PinterestAdminTab({ stories }) {
   const [account, setAccount] = useState(null);
   const [boards, setBoards] = useState([]);
   const [pins, setPins] = useState([]);
   const [form, setForm] = useState(emptyPin);
   const [editingPinId, setEditingPinId] = useState(null);
-  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busyPinId, setBusyPinId] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterStoryId, setFilterStoryId] = useState('all');
-  const [loading, setLoading] = useState(true);
-
-  const authHeader = () => ({ Authorization: `Bearer ${getAuthToken()}` });
+  const [filterBoardId, setFilterBoardId] = useState('all');
+  const [filterCoverage, setFilterCoverage] = useState('all');
+  const [pinSearch, setPinSearch] = useState('');
+  const [storySearch, setStorySearch] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+  const [activeStoryId, setActiveStoryId] = useState('');
 
   const loadAccount = useCallback(async () => {
     try {
       const data = await fetchJson('/api/admin/pinterest/account');
-      setAccount(data.account);
-    } catch { setAccount(null); }
+      setAccount(data.account ?? null);
+    } catch {
+      setAccount(null);
+    }
   }, []);
 
   const loadBoards = useCallback(async () => {
     try {
       const data = await fetchJson('/api/admin/pinterest/boards');
       setBoards(data.boards ?? []);
-    } catch { setBoards([]); }
+    } catch {
+      setBoards([]);
+    }
   }, []);
 
   const loadPins = useCallback(async () => {
+    const data = await fetchJson('/api/admin/pinterest/pins?limit=500');
+    setPins(data.pins ?? []);
+  }, []);
+
+  const refreshData = useCallback(async () => {
+    setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filterStatus !== 'all') params.set('status', filterStatus);
-      if (filterStoryId !== 'all') params.set('storyId', filterStoryId);
-      const data = await fetchJson(`/api/admin/pinterest/pins?${params}`);
-      setPins(data.pins ?? []);
-    } catch { setPins([]); }
-    setLoading(false);
-  }, [filterStatus, filterStoryId]);
+      await Promise.all([loadAccount(), loadPins()]);
+    } catch (error) {
+      setNotice({ kind: 'error', message: error.message });
+    } finally {
+      setLoading(false);
+    }
+  }, [loadAccount, loadPins]);
 
   useEffect(() => {
-    loadAccount();
-  }, [loadAccount]);
+    refreshData();
+  }, [refreshData]);
 
   useEffect(() => {
-    if (account) loadBoards();
+    if (account) {
+      loadBoards();
+      return;
+    }
+
+    setBoards([]);
   }, [account, loadBoards]);
 
   useEffect(() => {
-    loadPins();
-  }, [loadPins]);
+    function handleFocus() {
+      refreshData();
+    }
 
-  // Pre-fill form when a story is selected
-  useEffect(() => {
-    if (!form.storyId) return;
-    const story = stories.find(s => s.id === form.storyId);
-    if (!story) return;
-    setForm(prev => ({
-      ...prev,
-      title: prev.title || story.title || '',
-      description: prev.description || story.excerpt || '',
-      link: prev.link || `${SITE_ORIGIN}/story/${story.id}`,
-      imageUrl: prev.imageUrl || (story.image?.startsWith('/') ? `${SITE_ORIGIN}${story.image}` : story.image || ''),
-      altText: prev.altText || story.title || '',
-    }));
-  }, [form.storyId, stories]);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshData]);
 
-  async function connectPinterest() {
-    const data = await fetchJson('/api/admin/pinterest/connect');
-    window.open(data.url, '_blank', 'width=700,height=700');
+  const availableBoards = boards.length > 0
+    ? boards
+    : [...new Map(
+      pins
+        .filter((pin) => pin.board_id)
+        .map((pin) => [pin.board_id, { id: pin.board_id, name: pin.board_name ?? pin.board_id }]),
+    ).values()];
+
+  const storySummaries = stories.map((story) => buildStorySummary(story, pins));
+  const storySummaryMap = Object.fromEntries(storySummaries.map((summary) => [summary.story.id, summary]));
+  const selectedStory = stories.find((story) => story.id === form.storyId) ?? null;
+  const selectedStorySummary = selectedStory ? storySummaryMap[selectedStory.id] ?? null : null;
+
+  const totalPosted = pins.filter((pin) => pin.status === 'posted').length;
+  const totalScheduled = pins.filter((pin) => pin.status === 'scheduled').length;
+  const totalFailed = pins.filter((pin) => pin.status === 'failed').length;
+  const storiesWithPins = storySummaries.filter((summary) => summary.hasAnyPin).length;
+  const storiesPosted = storySummaries.filter((summary) => summary.hasPostedPin).length;
+  const storiesPending = storySummaries.filter((summary) => summary.hasQueuedPin && !summary.hasPostedPin).length;
+  const storiesWithoutPins = storySummaries.filter((summary) => !summary.hasAnyPin).length;
+
+  const normalizedPinSearch = normalizeText(pinSearch);
+  const filteredPins = [...pins]
+    .filter((pin) => (filterStatus === 'all' ? true : pin.status === filterStatus))
+    .filter((pin) => (filterStoryId === 'all' ? true : pin.story_id === filterStoryId))
+    .filter((pin) => (filterBoardId === 'all' ? true : pin.board_id === filterBoardId))
+    .filter((pin) => {
+      if (!normalizedPinSearch) return true;
+      const haystack = [pin.title, pin.description, pin.story_title, pin.board_name, pin.link].map(normalizeText).join(' ');
+      return haystack.includes(normalizedPinSearch);
+    })
+    .sort((left, right) => {
+      if (sortBy === 'title') {
+        return String(left.title ?? '').localeCompare(String(right.title ?? ''));
+      }
+
+      if (sortBy === 'status') {
+        return String(left.status ?? '').localeCompare(String(right.status ?? ''));
+      }
+
+      if (sortBy === 'oldest') {
+        return new Date(left.created_at ?? 0) - new Date(right.created_at ?? 0);
+      }
+
+      return new Date(right.scheduled_at ?? right.posted_at ?? right.updated_at ?? right.created_at ?? 0)
+        - new Date(left.scheduled_at ?? left.posted_at ?? left.updated_at ?? left.created_at ?? 0);
+    });
+
+  const normalizedStorySearch = normalizeText(storySearch);
+  const filteredStories = [...storySummaries]
+    .filter((summary) => {
+      if (filterCoverage === 'posted') return summary.hasPostedPin;
+      if (filterCoverage === 'queued') return summary.hasQueuedPin;
+      if (filterCoverage === 'unpinned') return !summary.hasAnyPin;
+      return true;
+    })
+    .filter((summary) => {
+      if (!normalizedStorySearch) return true;
+      const haystack = [summary.story.title, summary.story.excerpt, summary.story.sectionLabel, summary.story.topicLabel]
+        .map(normalizeText)
+        .join(' ');
+      return haystack.includes(normalizedStorySearch);
+    })
+    .sort((left, right) => {
+      const activeDelta = Number(right.story.id === activeStoryId) - Number(left.story.id === activeStoryId);
+      if (activeDelta) return activeDelta;
+      if (right.pinCount !== left.pinCount) return right.pinCount - left.pinCount;
+      if (right.postedCount !== left.postedCount) return right.postedCount - left.postedCount;
+      return String(left.story.title ?? '').localeCompare(String(right.story.title ?? ''));
+    });
+
+  function scrollToComposer() {
+    document.getElementById('pinterest-composer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async function submitPin(e) {
-    e.preventDefault();
-    setStatus('Saving…');
+  function setBoardSelection(boardId) {
+    const board = availableBoards.find((item) => item.id === boardId);
+    setForm((current) => ({
+      ...current,
+      boardId,
+      boardName: board?.name ?? '',
+    }));
+  }
+
+  function chooseStory(storyId) {
+    const story = stories.find((item) => item.id === storyId) ?? null;
+    setActiveStoryId(storyId || '');
+    setEditingPinId(null);
+    setForm((current) => createPinFromStory(story, current));
+  }
+
+  function startPinForStory(story) {
+    setNotice(null);
+    setActiveStoryId(story.id);
+    setEditingPinId(null);
+    setForm((current) => createPinFromStory(story, current));
+    scrollToComposer();
+  }
+
+  function duplicatePin(pin) {
+    setNotice(null);
+    setEditingPinId(null);
+    setActiveStoryId(pin.story_id ?? '');
+    setForm({
+      storyId: pin.story_id ?? '',
+      boardId: pin.board_id ?? '',
+      boardName: pin.board_name ?? '',
+      title: pin.title ?? '',
+      description: pin.description ?? '',
+      link: pin.link ?? '',
+      imageUrl: pin.image_url ?? '',
+      altText: pin.alt_text ?? '',
+      scheduledAt: '',
+    });
+    scrollToComposer();
+  }
+
+  function editPin(pin) {
+    setNotice(null);
+    setEditingPinId(pin.id);
+    setActiveStoryId(pin.story_id ?? '');
+    setForm({
+      storyId: pin.story_id ?? '',
+      boardId: pin.board_id ?? '',
+      boardName: pin.board_name ?? '',
+      title: pin.title ?? '',
+      description: pin.description ?? '',
+      link: pin.link ?? '',
+      imageUrl: pin.image_url ?? '',
+      altText: pin.alt_text ?? '',
+      scheduledAt: pin.scheduled_at ? new Date(pin.scheduled_at).toISOString().slice(0, 16) : '',
+    });
+    scrollToComposer();
+  }
+
+  function resetComposer() {
+    setEditingPinId(null);
+    setActiveStoryId('');
+    setForm(emptyPin);
+  }
+
+  async function connectPinterest() {
+    try {
+      const data = await fetchJson('/api/admin/pinterest/connect');
+      window.open(data.url, '_blank', 'width=760,height=820');
+      setNotice({
+        kind: 'info',
+        message: 'Pinterest authorization opened in a new window. Finish the approval flow, then return here and this dashboard will refresh.',
+      });
+    } catch (error) {
+      setNotice({ kind: 'error', message: error.message });
+    }
+  }
+
+  async function submitPin(event) {
+    event.preventDefault();
+    setNotice({ kind: 'info', message: editingPinId ? 'Updating pin...' : 'Saving pin...' });
+
     try {
       const body = {
         ...form,
         scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
       };
+
       if (editingPinId) {
         await fetchJson(`/api/admin/pinterest/pins/${editingPinId}`, {
-          method: 'PUT', headers: { ...authHeader(), 'Content-Type': 'application/json' },
+          method: 'PUT',
           body: JSON.stringify(body),
         });
-        setStatus('Pin updated.');
       } else {
         await fetchJson('/api/admin/pinterest/pins', {
-          method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
+          method: 'POST',
           body: JSON.stringify(body),
         });
-        setStatus('Pin created.');
       }
-      setForm(emptyPin);
+
+      await loadPins();
+      setNotice({ kind: 'success', message: editingPinId ? 'Pin updated.' : form.scheduledAt ? 'Pin scheduled.' : 'Draft saved.' });
       setEditingPinId(null);
-      loadPins();
-    } catch (err) {
-      setStatus(`Error: ${err.message}`);
+      setForm(createPinFromStory(selectedStory, form));
+    } catch (error) {
+      setNotice({ kind: 'error', message: error.message });
     }
   }
 
   async function postNow(pinId) {
-    setStatus('Posting to Pinterest…');
+    setBusyPinId(pinId);
+    setNotice({ kind: 'info', message: 'Posting to Pinterest...' });
+
     try {
       await fetchJson(`/api/admin/pinterest/pins/${pinId}/post`, {
-        method: 'POST', headers: authHeader(),
+        method: 'POST',
       });
-      setStatus('Posted!');
-      loadPins();
-    } catch (err) {
-      setStatus(`Failed: ${err.message}`);
+      await loadPins();
+      setNotice({ kind: 'success', message: 'Pin posted successfully.' });
+    } catch (error) {
+      setNotice({ kind: 'error', message: error.message });
+    } finally {
+      setBusyPinId(null);
     }
   }
 
   async function removePin(pinId) {
     if (!window.confirm('Delete this pin?')) return;
-    await fetchJson(`/api/admin/pinterest/pins/${pinId}`, {
-      method: 'DELETE', headers: authHeader(),
-    });
-    loadPins();
+    setBusyPinId(pinId);
+
+    try {
+      await fetchJson(`/api/admin/pinterest/pins/${pinId}`, {
+        method: 'DELETE',
+      });
+      await loadPins();
+      setNotice({ kind: 'success', message: 'Pin deleted.' });
+    } catch (error) {
+      setNotice({ kind: 'error', message: error.message });
+    } finally {
+      setBusyPinId(null);
+    }
   }
 
-  function editPin(pin) {
-    setEditingPinId(pin.id);
-    setForm({
-      storyId: pin.story_id ?? '',
-      boardId: pin.board_id ?? '',
-      boardName: pin.board_name ?? '',
-      title: pin.title,
-      description: pin.description,
-      link: pin.link,
-      imageUrl: pin.image_url,
-      altText: pin.alt_text,
-      scheduledAt: pin.scheduled_at ? new Date(pin.scheduled_at).toISOString().slice(0, 16) : '',
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function focusStory(summary) {
+    setActiveStoryId(summary.story.id);
+    setFilterStoryId(summary.story.id);
   }
 
-  function resetForm() {
-    setForm(emptyPin);
-    setEditingPinId(null);
+  function clearLibraryFilters() {
+    setPinSearch('');
+    setFilterStatus('all');
+    setFilterStoryId('all');
+    setFilterBoardId('all');
+    setSortBy('recent');
   }
-
-  const filteredPins = pins;
 
   return (
-    <div className="site-width pinterest-admin" style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', padding: '2rem 0' }}>
-      {/* ── Left: Form ── */}
-      <section className="story-surface admin-panel" style={{ flex: '0 0 420px', minWidth: 0 }}>
-        <div className="admin-panel__heading">
-          <div>
-            <span className="eyebrow">Pinterest</span>
-            <h2>{editingPinId ? 'Edit pin' : 'Create pin'}</h2>
-          </div>
-          <div className="admin-panel__heading-meta">
-            {account
-              ? <p>Connected as <strong>@{account.pinner_username ?? 'unknown'}</strong></p>
-              : (
-                <p style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  Not connected.{' '}
-                  <button type="button" className="button-secondary" onClick={connectPinterest}>
-                    Connect Pinterest
-                  </button>
-                </p>
-              )
-            }
-          </div>
-        </div>
-
-        {status && <div className="admin-status">{status}</div>}
-
-        <form className="admin-form" onSubmit={submitPin}>
-          <label>
-            Story (optional — auto-fills fields)
-            <select value={form.storyId} onChange={e => setForm({ ...emptyPin, storyId: e.target.value })}>
-              <option value="">— none —</option>
-              {stories.map(s => (
-                <option key={s.id} value={s.id}>{s.title}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Pin title *
-            <input
-              required
-              value={form.title}
-              onChange={e => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g. 10 Best Hair Trends for Summer 2026"
-            />
-          </label>
-
-          <label>
-            Description (SEO)
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={e => setForm({ ...form, description: e.target.value })}
-              placeholder="Describe the pin content with keywords. Pinterest uses this for search."
-            />
-          </label>
-
-          <label>
-            Destination link *
-            <input
-              required
-              value={form.link}
-              onChange={e => setForm({ ...form, link: e.target.value })}
-              placeholder="https://sponbit.com/story/..."
-            />
-          </label>
-
-          <label>
-            Image URL *
-            <input
-              required
-              value={form.imageUrl}
-              onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-              placeholder="https://..."
-            />
-            {form.imageUrl && (
-              <img
-                src={form.imageUrl}
-                alt="preview"
-                style={{ marginTop: 8, maxWidth: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8, display: 'block' }}
-              />
-            )}
-          </label>
-
-          <label>
-            Alt text
-            <input
-              value={form.altText}
-              onChange={e => setForm({ ...form, altText: e.target.value })}
-              placeholder="Describe the image for accessibility and SEO"
-            />
-          </label>
-
-          <label>
-            Board
-            {boards.length ? (
-              <select
-                value={form.boardId}
-                onChange={e => {
-                  const board = boards.find(b => b.id === e.target.value);
-                  setForm({ ...form, boardId: e.target.value, boardName: board?.name ?? '' });
-                }}
-              >
-                <option value="">— select board —</option>
-                {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            ) : (
-              <input
-                value={form.boardId}
-                onChange={e => setForm({ ...form, boardId: e.target.value })}
-                placeholder="Board ID (connect Pinterest to load boards)"
-              />
-            )}
-          </label>
-
-          <label>
-            Schedule (leave empty to save as draft)
-            <input
-              type="datetime-local"
-              value={form.scheduledAt}
-              onChange={e => setForm({ ...form, scheduledAt: e.target.value })}
-            />
-          </label>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button type="submit" className="button-primary">
-              {editingPinId ? 'Update pin' : form.scheduledAt ? 'Schedule pin' : 'Save draft'}
-            </button>
-            {editingPinId && (
-              <button type="button" className="button-secondary" onClick={resetForm}>Cancel</button>
-            )}
-          </div>
-        </form>
+    <div className="site-width pinterest-admin">
+      <section className="admin-overview-grid pinterest-admin__stats">
+        <MetricCard value={pins.length} label="Pins in library" note={`${totalScheduled} scheduled, ${totalFailed} failed`} />
+        <MetricCard value={storiesWithPins} label="Stories with Pinterest coverage" note={`${storiesWithoutPins} stories still not pinned`} />
+        <MetricCard value={totalPosted} label="Pins already published" note={`${storiesPosted} stories already live on Pinterest`} />
+        <MetricCard value={storiesPending} label="Stories waiting in queue" note={account ? `Connected as @${account.pinner_username ?? 'unknown'}` : 'Connect Pinterest to publish'} />
       </section>
 
-      {/* ── Right: Pin list ── */}
-      <section className="story-surface admin-panel" style={{ flex: 1, minWidth: 0 }}>
-        <div className="admin-panel__heading">
-          <div>
-            <span className="eyebrow">Queue</span>
-            <h2>Pin library</h2>
+      <div className="pinterest-admin__layout">
+        <section id="pinterest-composer" className="story-surface admin-panel">
+          <div className="admin-panel__heading">
+            <div>
+              <span className="eyebrow">Pinterest</span>
+              <h2>{editingPinId ? 'Edit pin' : 'Create a new pin'}</h2>
+            </div>
+            <div className="admin-panel__heading-meta">
+              <p>{account ? 'Choose a story, adjust SEO copy, then draft, schedule, or post.' : 'Connect Pinterest first, then start building pins from any story.'}</p>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <select
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <option value="all">All statuses</option>
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="posted">Posted</option>
-              <option value="failed">Failed</option>
-            </select>
-            <select
-              value={filterStoryId}
-              onChange={e => setFilterStoryId(e.target.value)}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <option value="all">All stories</option>
-              {stories.map(s => <option key={s.id} value={s.id}>{s.title.slice(0, 40)}</option>)}
-            </select>
-          </div>
-        </div>
 
-        {loading && <p style={{ padding: '1rem' }}>Loading pins…</p>}
+          {notice ? (
+            <div className={`pinterest-admin__notice pinterest-admin__notice--${notice.kind ?? 'info'}`}>
+              <p>{notice.message}</p>
+            </div>
+          ) : null}
 
-        {!loading && filteredPins.length === 0 && (
-          <div className="admin-library-empty" style={{ padding: '2rem', textAlign: 'center' }}>
-            <h3>No pins yet</h3>
-            <p>Create your first pin using the form on the left.</p>
-          </div>
-        )}
-
-        <div className="admin-record-list">
-          {filteredPins.map(pin => (
-            <article key={pin.id} className="admin-record-card" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              {pin.image_url && (
-                <img
-                  src={pin.image_url}
-                  alt={pin.alt_text || pin.title}
-                  style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
-                />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="admin-record-card__header">
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '0.95rem' }}>{pin.title}</h3>
-                    {pin.story_title && (
-                      <span className="eyebrow" style={{ fontSize: '0.7rem' }}>Story: {pin.story_title}</span>
-                    )}
-                  </div>
-                  <div className="admin-badge-list">
-                    {statusBadge(pin.status)}
-                    {pin.board_name && <span className="admin-badge">{pin.board_name}</span>}
-                  </div>
+          {selectedStorySummary ? (
+            <div className="pinterest-admin__story-preview">
+              <div className="admin-record-card__header">
+                <div>
+                  <span className="eyebrow">Selected story</span>
+                  <h3>{selectedStorySummary.story.title}</h3>
                 </div>
-                {pin.description && (
-                  <p style={{ margin: '4px 0', fontSize: '0.8rem', color: 'var(--text-muted, #666)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {pin.description}
-                  </p>
-                )}
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #888)', marginTop: 4 }}>
-                  {pin.status === 'scheduled' && <>Scheduled: {formatDateTime(pin.scheduled_at)}</>}
-                  {pin.status === 'posted' && <>Posted: {formatDateTime(pin.posted_at)}</>}
-                  {pin.status === 'failed' && <span style={{ color: '#d0342c' }}>Error: {pin.error_message}</span>}
-                  {pin.status === 'draft' && <>Created: {formatDateTime(pin.created_at)}</>}
-                </div>
-                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                  {pin.status !== 'posted' && account && (
-                    <button
-                      type="button"
-                      className="button-primary"
-                      style={{ fontSize: '0.75rem', padding: '4px 12px' }}
-                      onClick={() => postNow(pin.id)}
-                    >
-                      Post now
-                    </button>
-                  )}
-                  {pin.status !== 'posted' && (
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      style={{ fontSize: '0.75rem', padding: '4px 12px' }}
-                      onClick={() => editPin(pin)}
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {pin.pinterest_pin_id && (
-                    <a
-                      href={`https://pinterest.com/pin/${pin.pinterest_pin_id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="button-secondary"
-                      style={{ fontSize: '0.75rem', padding: '4px 12px', textDecoration: 'none' }}
-                    >
-                      View on Pinterest
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    style={{ fontSize: '0.75rem', padding: '4px 12px', background: 'none', border: 'none', color: '#d0342c', cursor: 'pointer' }}
-                    onClick={() => removePin(pin.id)}
-                  >
-                    Delete
-                  </button>
+                <div className="admin-badge-list">
+                  <span className="admin-badge">{selectedStorySummary.pinCount} total pins</span>
+                  <span className="admin-badge admin-badge--soft">{selectedStorySummary.postedCount} posted</span>
+                  {selectedStorySummary.scheduledCount ? <span className="admin-badge admin-badge--soft">{selectedStorySummary.scheduledCount} scheduled</span> : null}
                 </div>
               </div>
-            </article>
-          ))}
+              <p>{truncateText(selectedStorySummary.story.excerpt || 'No excerpt available for this story yet.', 180)}</p>
+              <div className="admin-record-card__meta">
+                {selectedStorySummary.boards.length ? <span>Boards: {selectedStorySummary.boards.join(', ')}</span> : <span>No board used yet</span>}
+                {selectedStorySummary.latestPin ? <span>Latest activity: {formatDateTime(selectedStorySummary.latestPin.updated_at ?? selectedStorySummary.latestPin.created_at)}</span> : <span>No Pinterest activity yet</span>}
+              </div>
+              {selectedStorySummary.pins.length ? (
+                <div className="pinterest-admin__mini-list">
+                  {selectedStorySummary.pins.slice(0, 3).map((pin) => (
+                    <article key={pin.id} className="pinterest-admin__mini-item">
+                      <div className="admin-record-card__header">
+                        <div>
+                          <h4>{pin.title}</h4>
+                          <p>{truncateText(pin.description || 'No description', 110)}</p>
+                        </div>
+                        <div className="admin-badge-list">{statusBadge(pin.status)}</div>
+                      </div>
+                      <div className="admin-record-card__actions">
+                        {pin.status !== 'posted' ? (
+                          <button type="button" className="button-secondary" onClick={() => editPin(pin)}>
+                            Edit
+                          </button>
+                        ) : null}
+                        <button type="button" className="button-secondary" onClick={() => duplicatePin(pin)}>
+                          Duplicate
+                        </button>
+                        <button type="button" className="button-secondary" onClick={() => focusStory(selectedStorySummary)}>
+                          Show in library
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <form className="admin-form" onSubmit={submitPin}>
+            <label>
+              Story
+              <select value={form.storyId} onChange={(event) => chooseStory(event.target.value)}>
+                <option value="">- choose a story -</option>
+                {[...stories].sort((left, right) => String(left.title ?? '').localeCompare(String(right.title ?? ''))).map((story) => (
+                  <option key={story.id} value={story.id}>{story.title}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Pin title *
+              <input
+                required
+                value={form.title}
+                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Write the on-Pinterest headline"
+              />
+            </label>
+
+            <label>
+              Description
+              <textarea
+                rows={4}
+                value={form.description}
+                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                placeholder="Add SEO-friendly copy and a clear reason to click"
+              />
+            </label>
+
+            <label>
+              Destination link *
+              <input
+                required
+                value={form.link}
+                onChange={(event) => setForm((current) => ({ ...current, link: event.target.value }))}
+                placeholder="https://sponbit.com/story/..."
+              />
+            </label>
+
+            <label>
+              Image URL *
+              <input
+                required
+                value={form.imageUrl}
+                onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+                placeholder="https://..."
+              />
+            </label>
+
+            {form.imageUrl ? (
+              <img className="pinterest-admin__pin-media" src={absoluteUrl(form.imageUrl)} alt="Pin preview" />
+            ) : null}
+
+            <label>
+              Alt text
+              <input
+                value={form.altText}
+                onChange={(event) => setForm((current) => ({ ...current, altText: event.target.value }))}
+                placeholder="Describe the image for accessibility"
+              />
+            </label>
+
+            <label>
+              Board
+              {availableBoards.length ? (
+                <select value={form.boardId} onChange={(event) => setBoardSelection(event.target.value)}>
+                  <option value="">- select board -</option>
+                  {availableBoards.map((board) => (
+                    <option key={board.id} value={board.id}>{board.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={form.boardId}
+                  onChange={(event) => setForm((current) => ({ ...current, boardId: event.target.value, boardName: '' }))}
+                  placeholder="Connect Pinterest to load boards"
+                />
+              )}
+            </label>
+
+            <label>
+              Schedule
+              <input
+                type="datetime-local"
+                value={form.scheduledAt}
+                onChange={(event) => setForm((current) => ({ ...current, scheduledAt: event.target.value }))}
+              />
+            </label>
+
+            <div className="pinterest-admin__actions">
+              <button type="submit" className="button-primary" disabled={!account}>
+                {editingPinId ? 'Update pin' : form.scheduledAt ? 'Schedule pin' : 'Save draft'}
+              </button>
+              <button type="button" className="button-secondary" onClick={resetComposer}>
+                Reset form
+              </button>
+              {!account ? (
+                <button type="button" className="button-secondary" onClick={connectPinterest}>
+                  Connect Pinterest
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </section>
+
+        <div className="pinterest-admin__main">
+          <section className="story-surface admin-panel">
+            <div className="admin-panel__heading">
+              <div>
+                <span className="eyebrow">Connection</span>
+                <h2>Pinterest account and workflow</h2>
+              </div>
+              <div className="admin-panel__actions">
+                <button type="button" className="button-secondary" onClick={refreshData}>
+                  Refresh data
+                </button>
+                {!account ? (
+                  <button type="button" className="button-primary" onClick={connectPinterest}>
+                    Connect Pinterest
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="pinterest-admin__account">
+              {account ? (
+                <>
+                  <div className="admin-badge-list admin-badge-list--start">
+                    <span className="admin-badge admin-badge--accent">Connected</span>
+                    <span className="admin-badge">@{account.pinner_username ?? 'unknown'}</span>
+                    <span className="admin-badge">{availableBoards.length} boards loaded</span>
+                  </div>
+                  <p>Draft pins, schedule them for later, or publish immediately from the library below.</p>
+                </>
+              ) : (
+                <p>No Pinterest account is connected yet. Connect an account to load boards, save pins, and publish from the admin dashboard.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="story-surface admin-panel">
+            <div className="admin-panel__heading">
+              <div>
+                <span className="eyebrow">Coverage</span>
+                <h2>Story-by-story Pinterest status</h2>
+              </div>
+              <div className="admin-panel__heading-meta">
+                <p>See which stories are already covered, what is scheduled, and what still needs a first pin.</p>
+              </div>
+            </div>
+
+            <div className="pinterest-admin__filters">
+              <label className="admin-search-field admin-search-field--wide">
+                <span>Search stories</span>
+                <input value={storySearch} onChange={(event) => setStorySearch(event.target.value)} placeholder="Search by title, excerpt, section..." />
+              </label>
+              <label className="admin-inline-field">
+                <span>Coverage</span>
+                <select value={filterCoverage} onChange={(event) => setFilterCoverage(event.target.value)}>
+                  <option value="all">All stories</option>
+                  <option value="posted">Already posted</option>
+                  <option value="queued">Queued or draft</option>
+                  <option value="unpinned">No pins yet</option>
+                </select>
+              </label>
+            </div>
+
+            {!loading && filteredStories.length === 0 ? (
+              <div className="admin-library-empty">
+                <h3>No stories match this view</h3>
+                <p>Try a broader search or switch the coverage filter.</p>
+              </div>
+            ) : null}
+
+            <div className="admin-record-list admin-record-list--stories pinterest-admin__story-grid">
+              {filteredStories.map((summary) => (
+                <article
+                  key={summary.story.id}
+                  className={`admin-record-card admin-record-card--story ${summary.story.id === activeStoryId ? 'admin-record-card--active' : ''}`}
+                >
+                  <div className="admin-record-card__header">
+                    <div className="pinterest-admin__story-card-body">
+                      <span className="eyebrow">{summary.story.sectionLabel ?? 'Story'}</span>
+                      <h3>{summary.story.title}</h3>
+                    </div>
+                    <div className="admin-badge-list">
+                      {summary.hasPostedPin ? <span className="admin-badge admin-badge--accent">Pinned live</span> : null}
+                      {!summary.hasAnyPin ? <span className="admin-badge">Needs first pin</span> : null}
+                      <span className="admin-badge admin-badge--soft">{summary.pinCount} pins</span>
+                    </div>
+                  </div>
+                  <p>{truncateText(summary.story.excerpt || 'No excerpt available for this story yet.', 150)}</p>
+                  <div className="admin-record-card__meta">
+                    <span>{summary.postedCount} posted</span>
+                    <span>{summary.scheduledCount} scheduled</span>
+                    <span>{summary.draftCount} drafts</span>
+                    {summary.failedCount ? <span>{summary.failedCount} failed</span> : null}
+                  </div>
+                  <div className="admin-record-card__meta">
+                    {summary.latestPin ? <span>Latest pin: {formatDateTime(summary.latestPin.updated_at ?? summary.latestPin.created_at)}</span> : <span>No pin created yet</span>}
+                    {summary.boards.length ? <span>Boards: {summary.boards.join(', ')}</span> : null}
+                  </div>
+                  <div className="admin-record-card__actions pinterest-admin__story-actions">
+                    <button type="button" className="button-primary" onClick={() => startPinForStory(summary.story)}>
+                      {summary.hasAnyPin ? 'Create another pin' : 'Create first pin'}
+                    </button>
+                    <button type="button" className="button-secondary" onClick={() => focusStory(summary)}>
+                      Show pins
+                    </button>
+                    {summary.latestPin && summary.latestPin.status !== 'posted' ? (
+                      <button type="button" className="button-secondary" onClick={() => editPin(summary.latestPin)}>
+                        Edit latest draft
+                      </button>
+                    ) : null}
+                    <a className="button-secondary" href={storyDestination(summary.story)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                      Open story
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="story-surface admin-panel">
+            <div className="admin-panel__heading">
+              <div>
+                <span className="eyebrow">Library</span>
+                <h2>Pin queue and publishing history</h2>
+              </div>
+              <div className="admin-panel__heading-meta">
+                <p>Filter by status, board, story, or search text to manage the queue quickly.</p>
+              </div>
+            </div>
+
+            <div className="pinterest-admin__filters">
+              <label className="admin-search-field admin-search-field--wide">
+                <span>Search pins</span>
+                <input value={pinSearch} onChange={(event) => setPinSearch(event.target.value)} placeholder="Search title, board, story, link..." />
+              </label>
+              <label className="admin-inline-field">
+                <span>Status</span>
+                <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)}>
+                  <option value="all">All statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="posted">Posted</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </label>
+              <label className="admin-inline-field">
+                <span>Story</span>
+                <select value={filterStoryId} onChange={(event) => setFilterStoryId(event.target.value)}>
+                  <option value="all">All stories</option>
+                  {stories.map((story) => (
+                    <option key={story.id} value={story.id}>{story.title}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-inline-field">
+                <span>Board</span>
+                <select value={filterBoardId} onChange={(event) => setFilterBoardId(event.target.value)}>
+                  <option value="all">All boards</option>
+                  {availableBoards.map((board) => (
+                    <option key={board.id} value={board.id}>{board.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-inline-field">
+                <span>Sort</span>
+                <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                  <option value="recent">Latest activity</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title">Title</option>
+                  <option value="status">Status</option>
+                </select>
+              </label>
+              <div className="pinterest-admin__pin-tools">
+                <button type="button" className="button-secondary" onClick={clearLibraryFilters}>
+                  Reset filters
+                </button>
+                <button type="button" className="button-secondary" onClick={refreshData}>
+                  Reload pins
+                </button>
+              </div>
+            </div>
+
+            {loading ? <p>Loading Pinterest data...</p> : null}
+
+            {!loading && filteredPins.length === 0 ? (
+              <div className="admin-library-empty">
+                <h3>No pins match these filters</h3>
+                <p>Reset the filters or create a new pin from a story card above.</p>
+              </div>
+            ) : null}
+
+            <div className="admin-record-list">
+              {filteredPins.map((pin) => (
+                <article key={pin.id} className="admin-record-card pinterest-admin__pin-card">
+                  {pin.image_url ? (
+                    <img className="pinterest-admin__pin-media" src={absoluteUrl(pin.image_url)} alt={pin.alt_text || pin.title} />
+                  ) : (
+                    <div className="pinterest-admin__pin-media" />
+                  )}
+                  <div className="pinterest-admin__pin-body">
+                    <div className="admin-record-card__header">
+                      <div>
+                        <h3 style={{ marginBottom: 8 }}>{pin.title}</h3>
+                        <div className="admin-badge-list admin-badge-list--start">
+                          {statusBadge(pin.status)}
+                          {pin.board_name ? <span className="admin-badge">{pin.board_name}</span> : null}
+                          {pin.story_title ? <span className="admin-badge admin-badge--soft">{pin.story_title}</span> : null}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="pinterest-admin__pin-description">{truncateText(pin.description || 'No description added yet.', 220)}</p>
+
+                    <div className="admin-record-card__meta pinterest-admin__pin-meta">
+                      <span>Created: {formatDateTime(pin.created_at)}</span>
+                      {pin.status === 'scheduled' ? <span>Scheduled: {formatDateTime(pin.scheduled_at)}</span> : null}
+                      {pin.status === 'posted' ? <span>Posted: {formatDateTime(pin.posted_at)}</span> : null}
+                      {pin.status === 'failed' && pin.error_message ? <span style={{ color: '#c54535' }}>Error: {pin.error_message}</span> : null}
+                    </div>
+
+                    <div className="admin-record-card__actions">
+                      {pin.status !== 'posted' && account ? (
+                        <button type="button" className="button-primary" disabled={busyPinId === pin.id} onClick={() => postNow(pin.id)}>
+                          {busyPinId === pin.id ? 'Posting...' : 'Post now'}
+                        </button>
+                      ) : null}
+                      {pin.status !== 'posted' ? (
+                        <button type="button" className="button-secondary" onClick={() => editPin(pin)}>
+                          Edit
+                        </button>
+                      ) : null}
+                      <button type="button" className="button-secondary" onClick={() => duplicatePin(pin)}>
+                        Duplicate
+                      </button>
+                      {pin.story_id ? (
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => {
+                            setActiveStoryId(pin.story_id);
+                            setFilterStoryId(pin.story_id);
+                          }}
+                        >
+                          Related story
+                        </button>
+                      ) : null}
+                      {pin.pinterest_pin_id ? (
+                        <a className="button-secondary" href={`https://pinterest.com/pin/${pin.pinterest_pin_id}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                          View on Pinterest
+                        </a>
+                      ) : null}
+                      {pin.link ? (
+                        <a className="button-secondary" href={absoluteUrl(pin.link)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                          Open destination
+                        </a>
+                      ) : null}
+                      <button type="button" className="button-danger" disabled={busyPinId === pin.id} onClick={() => removePin(pin.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
