@@ -6,6 +6,7 @@ import { useSite } from '../context/SiteContext';
 import { fetchJson, getAuthToken } from '../lib/api';
 import { toDateInputValue } from '../lib/content';
 import { useApiResource } from '../lib/useApiResource';
+import { PinterestAdminTab } from './PinterestAdminTab';
 
 function exportStoriesToXlsx(stories) {
   const origin = window.location.origin;
@@ -28,6 +29,7 @@ const viewOptions = [
   { key: 'sections', label: 'Sections' },
   { key: 'topics', label: 'Topics' },
   { key: 'stories', label: 'Stories' },
+  { key: 'pinterest', label: 'Pinterest' },
 ];
 
 const pageSizes = {
@@ -775,14 +777,16 @@ export function AdminPage() {
           </div>
         </div>
         <div className="admin-toolbar__meta">
-          <div className="admin-summary-card story-surface">
-            <strong>
-              {currentRangeStart}-{currentRangeEnd}
-            </strong>
-            <span>
-              of {currentTotal} {activeView}
-            </span>
-          </div>
+          {activeView !== 'pinterest' && (
+            <div className="admin-summary-card story-surface">
+              <strong>
+                {currentRangeStart}-{currentRangeEnd}
+              </strong>
+              <span>
+                of {currentTotal} {activeView}
+              </span>
+            </div>
+          )}
           <AdminStatus status={status} />
         </div>
       </section>
@@ -794,7 +798,10 @@ export function AdminPage() {
             : 'site-width admin-workspace'
         }
       >
-        <div className="admin-editor-column">
+        {activeView === 'pinterest' ? (
+          <PinterestAdminTab stories={stories} />
+        ) : null}
+        <div className="admin-editor-column" style={activeView === 'pinterest' ? { display: 'none' } : undefined}>
           {activeView === 'sections' ? (
             <AdminPanel
               title={sectionForm.id ? `Editing ${sectionForm.label}` : 'Section editor'}
@@ -1180,7 +1187,7 @@ export function AdminPage() {
           ) : null}
         </div>
 
-        <div className="admin-list-column">
+        <div className="admin-list-column" style={activeView === 'pinterest' ? { display: 'none' } : undefined}>
           {activeView === 'sections' ? (
             <AdminPanel
               title="Section library"

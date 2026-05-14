@@ -31,6 +31,20 @@ import {
   updateTopic,
 } from './contentService.js';
 import { pool } from './db.js';
+import {
+  buildOAuthUrl,
+  createPin,
+  deletePin,
+  ensurePinterestSchema,
+  getAccountForUser,
+  getBoards,
+  listPins,
+  postPinNow,
+  processScheduledPins,
+  saveAccount,
+  updatePin,
+  exchangeCodeForToken,
+} from './pinterestService.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -251,6 +265,70 @@ app.delete('/api/admin/stories/:storyId', asyncRoute(async (request, response) =
   response.status(204).end();
 }));
 
+// ─── Pinterest routes ─────────────────────────────────────────────────────────
+
+app.get('/api/admin/pinterest/connect', asyncRoute(async (request, response) => {
+  const state = Buffer.from(String(request.user.id)).toString('base64');
+  response.json({ url: buildOAuthUrl(state) });
+}));
+
+app.get('/api/admin/pinterest/callback', asyncRoute(async (request, response) => {
+  const { code, state } = request.query;
+  if (!code) {
+    response.redirect('/#/admin?pinterest=error');
+    return;
+  }
+  // state encodes userId
+  const userId = Number(Buffer.from(String(state), 'base64').toString());
+  const tokenData = await exchangeCodeForToken(String(code));
+  await saveAccount(userId, tokenData);
+  response.redirect('/#/admin?pinterest=connected&tab=pinterest');
+}));
+
+app.get('/api/admin/pinterest/account', asyncRoute(async (request, response) => {
+  const account = await getAccountForUser(request.user.id);
+  response.json({ account });
+}));
+
+app.get('/api/admin/pinterest/boards', asyncRoute(async (request, response) => {
+  const boards = await getBoards(request.user.id);
+  response.json({ boards });
+}));
+
+app.get('/api/admin/pinterest/pins', asyncRoute(async (request, response) => {
+  const { storyId, status, limit, offset } = request.query;
+  const pins = await listPins({
+    storyId: storyId || undefined,
+    status: status || undefined,
+    limit: limit ? Number(limit) : 50,
+    offset: offset ? Number(offset) : 0,
+  });
+  response.json({ pins });
+}));
+
+app.post('/api/admin/pinterest/pins', asyncRoute(async (request, response) => {
+  const account = await getAccountForUser(request.user.id);
+  if (!account) throw createHttpError(400, 'Pinterest account not connected');
+  const pin = await createPin({ ...request.body, accountId: account.id });
+  response.status(201).json(pin);
+}));
+
+app.put('/api/admin/pinterest/pins/:pinId', asyncRoute(async (request, response) => {
+  const pin = await updatePin(Number(request.params.pinId), request.body);
+  if (!pin) response.status(404).json({ message: 'Pin not found' });
+  else response.json(pin);
+}));
+
+app.delete('/api/admin/pinterest/pins/:pinId', asyncRoute(async (request, response) => {
+  await deletePin(Number(request.params.pinId));
+  response.status(204).end();
+}));
+
+app.post('/api/admin/pinterest/pins/:pinId/post', asyncRoute(async (request, response) => {
+  const result = await postPinNow(Number(request.params.pinId));
+  response.json(result);
+}));
+
 app.use((error, _request, response, _next) => {
   console.error(error);
   response.status(error.status ?? 500).json({
@@ -261,6 +339,12 @@ app.use((error, _request, response, _next) => {
 
 async function start() {
   await ensureBootstrap();
+  await ensurePinterestSchema();
+
+  // Cron: check scheduled pins every 5 minutes
+  setInterval(async () => {
+    try { await processScheduledPins(); } catch (e) { console.error('Pinterest cron:', e.message); }
+  }, 5 * 60 * 1000);
 
   app.listen(port, () => {
     console.log(`API listening on http://localhost:${port}`);
