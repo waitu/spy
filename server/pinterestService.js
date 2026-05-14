@@ -3,7 +3,7 @@ import { pool } from './db.js';
 const PINTEREST_API = 'https://api.pinterest.com/v5';
 const CLIENT_ID = process.env.PINTEREST_CLIENT_ID ?? '';
 const CLIENT_SECRET = process.env.PINTEREST_CLIENT_SECRET ?? '';
-const REDIRECT_URI = process.env.PINTEREST_REDIRECT_URI ?? 'https://sponbit.com/api/admin/pinterest/callback';
+const REDIRECT_URI = process.env.PINTEREST_REDIRECT_URI ?? 'https://sponbit.com/api/pinterest/callback';
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 

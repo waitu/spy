@@ -191,6 +191,36 @@ app.post('/api/auth/signout', requireAuth(), asyncRoute(async (_request, respons
   response.status(204).end();
 }));
 
+app.get('/api/pinterest/callback', asyncRoute(async (request, response) => {
+  const { code, state } = request.query;
+  if (!code || !state) {
+    response.redirect('/admin?pinterest=error');
+    return;
+  }
+
+  const userId = Number(Buffer.from(String(state), 'base64').toString());
+  const tokenData = await exchangeCodeForToken(String(code));
+  await saveAccount(userId, tokenData);
+
+  response.type('html').send(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Pinterest connected</title>
+  </head>
+  <body>
+    <script>
+      if (window.opener && !window.opener.closed) {
+        window.opener.location.href = '/admin?pinterest=connected&tab=pinterest';
+        window.close();
+      } else {
+        window.location.replace('/admin?pinterest=connected&tab=pinterest');
+      }
+    </script>
+  </body>
+</html>`);
+}));
+
 app.use('/api/admin', requireAuth(), requireRole('admin'));
 
 app.get('/api/admin/dashboard', asyncRoute(async (_request, response) => {
@@ -270,19 +300,6 @@ app.delete('/api/admin/stories/:storyId', asyncRoute(async (request, response) =
 app.get('/api/admin/pinterest/connect', asyncRoute(async (request, response) => {
   const state = Buffer.from(String(request.user.id)).toString('base64');
   response.json({ url: buildOAuthUrl(state) });
-}));
-
-app.get('/api/admin/pinterest/callback', asyncRoute(async (request, response) => {
-  const { code, state } = request.query;
-  if (!code) {
-    response.redirect('/#/admin?pinterest=error');
-    return;
-  }
-  // state encodes userId
-  const userId = Number(Buffer.from(String(state), 'base64').toString());
-  const tokenData = await exchangeCodeForToken(String(code));
-  await saveAccount(userId, tokenData);
-  response.redirect('/#/admin?pinterest=connected&tab=pinterest');
 }));
 
 app.get('/api/admin/pinterest/account', asyncRoute(async (request, response) => {
