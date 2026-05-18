@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { PageMasthead } from '../components/HeroSection';
 import { RichTextEditor } from '../components/RichTextEditor';
@@ -6,7 +7,6 @@ import { useSite } from '../context/SiteContext';
 import { fetchJson, getAuthToken } from '../lib/api';
 import { toDateInputValue } from '../lib/content';
 import { useApiResource } from '../lib/useApiResource';
-import { PinterestAdminTab } from './PinterestAdminTab';
 
 function exportStoriesToXlsx(stories) {
   const origin = window.location.origin;
@@ -29,7 +29,6 @@ const viewOptions = [
   { key: 'sections', label: 'Sections' },
   { key: 'topics', label: 'Topics' },
   { key: 'stories', label: 'Stories' },
-  { key: 'pinterest', label: 'Pinterest' },
 ];
 
 const pageSizes = {
@@ -742,6 +741,7 @@ export function AdminPage() {
         <OverviewCard label="Sections" value={sections.length} meta="Top-level navigation groups." />
         <OverviewCard label="Topics" value={topics.length} meta="Subcategories linked to sections." />
         <OverviewCard label="Stories" value={stories.length} meta="Published records powering the site." />
+        <OverviewCard label="Pinterest" value="Dashboard" meta="Open the dedicated Pinterest planning and publishing workspace." />
         <OverviewCard
           label="Homepage lead"
           value={leadStory ? 'Set' : 'Missing'}
@@ -759,6 +759,9 @@ export function AdminPage() {
             ))}
           </div>
           <div className="admin-toolbar__actions">
+            <Link className="button-secondary" to="/admin/pinterest" style={{ textDecoration: 'none' }}>
+              Open Pinterest dashboard
+            </Link>
             {activeView === 'sections' ? (
               <button type="button" className="button-secondary" onClick={resetSectionForm}>
                 New section
@@ -777,16 +780,14 @@ export function AdminPage() {
           </div>
         </div>
         <div className="admin-toolbar__meta">
-          {activeView !== 'pinterest' && (
-            <div className="admin-summary-card story-surface">
-              <strong>
-                {currentRangeStart}-{currentRangeEnd}
-              </strong>
-              <span>
-                of {currentTotal} {activeView}
-              </span>
-            </div>
-          )}
+          <div className="admin-summary-card story-surface">
+            <strong>
+              {currentRangeStart}-{currentRangeEnd}
+            </strong>
+            <span>
+              of {currentTotal} {activeView}
+            </span>
+          </div>
           <AdminStatus status={status} />
         </div>
       </section>
@@ -798,10 +799,7 @@ export function AdminPage() {
             : 'site-width admin-workspace'
         }
       >
-        {activeView === 'pinterest' ? (
-          <PinterestAdminTab stories={stories} />
-        ) : null}
-        <div className="admin-editor-column" style={activeView === 'pinterest' ? { display: 'none' } : undefined}>
+        <div className="admin-editor-column">
           {activeView === 'sections' ? (
             <AdminPanel
               title={sectionForm.id ? `Editing ${sectionForm.label}` : 'Section editor'}
@@ -1187,7 +1185,7 @@ export function AdminPage() {
           ) : null}
         </div>
 
-        <div className="admin-list-column" style={activeView === 'pinterest' ? { display: 'none' } : undefined}>
+        <div className="admin-list-column">
           {activeView === 'sections' ? (
             <AdminPanel
               title="Section library"

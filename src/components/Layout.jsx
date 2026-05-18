@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ChevronDown, Menu, Search, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +14,9 @@ export function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const searchInputRef = useRef(null);
+  const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const { navSections } = useSite();
   const { isAuthenticated, signout, user } = useAuth();
@@ -39,6 +41,21 @@ export function Layout({ children }) {
     closeSearch();
     navigate(`/search?q=${encodeURIComponent(q)}`);
   }
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (!userMenuRef.current?.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handlePointerDown);
+    }
+
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [userMenuOpen]);
+
   const quickLinks = [
     { label: 'Home', to: '/' },
     { label: 'Shopping', to: sectionPath('shopping') },
@@ -79,7 +96,35 @@ export function Layout({ children }) {
             )}
             {isAuthenticated ? (
               <>
-                <span className="user-chip">{user.name} · {user.role}</span>
+                {user?.role === 'admin' ? (
+                  <div className="user-menu" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      className="user-chip user-chip--button"
+                      aria-haspopup="menu"
+                      aria-expanded={userMenuOpen}
+                      onClick={() => setUserMenuOpen((current) => !current)}
+                    >
+                      <span>{user.name} · {user.role}</span>
+                      <ChevronDown size={14} strokeWidth={2.2} />
+                    </button>
+                    {userMenuOpen ? (
+                      <div className="user-menu__panel" role="menu" aria-label="Admin menu">
+                        <Link className="user-menu__link" to="/admin" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          Content studio
+                        </Link>
+                        <Link className="user-menu__link" to="/admin/pinterest" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          Pinterest dashboard
+                        </Link>
+                        <Link className="user-menu__link" to="/" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          View site
+                        </Link>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <span className="user-chip">{user.name} · {user.role}</span>
+                )}
                 <button className="sign-in-link button-link" type="button" onClick={signout}>
                   SIGN OUT
                 </button>

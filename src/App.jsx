@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { useSite } from './context/SiteContext';
+import { AdminShell } from './components/AdminShell';
 import { Layout } from './components/Layout';
 import { HeroSection, PageMasthead } from './components/HeroSection';
 import { FeatureRow, PopularList, RecentList, StoryGrid, StoryMiniList } from './components/StoryCards';
@@ -11,6 +12,7 @@ import { useApiResource } from './lib/useApiResource';
 import { fetchJson } from './lib/api';
 import { parseStoryBody, sectionPath, storyPath, toStoryImageBackground, topicPath } from './lib/content';
 import { AdminPage } from './pages/AdminPage';
+import { PinterestDashboardPage } from './pages/PinterestDashboardPage';
 import { SignInPage, SignUpPage } from './pages/AuthPage';
 
 function Breadcrumbs({ items }) {
@@ -53,7 +55,7 @@ function GuestOnlyRoute({ children }) {
   return children;
 }
 
-function AdminRoute() {
+function AdminRoute({ children }) {
   const { authReady, user } = useAuth();
   const location = useLocation();
 
@@ -69,7 +71,7 @@ function AdminRoute() {
     return <PageState title="Admin only" description="Your account is signed in, but it does not have access to the admin workspace." />;
   }
 
-  return <AdminPage />;
+  return children;
 }
 
 function ChannelDirectory({ navSections }) {
@@ -753,6 +755,21 @@ function PrivacyPolicyPage() {
 }
 
 export default function App() {
+  const location = useLocation();
+  const isAdminArea = location.pathname.startsWith('/admin');
+
+  if (isAdminArea) {
+    return (
+      <AdminShell>
+        <Routes>
+          <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+          <Route path="/admin/pinterest" element={<AdminRoute><PinterestDashboardPage /></AdminRoute>} />
+          <Route path="*" element={<Navigate replace to="/admin" />} />
+        </Routes>
+      </AdminShell>
+    );
+  }
+
   return (
     <Layout>
       <Routes>
@@ -764,7 +781,6 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/signin" element={<GuestOnlyRoute><SignInPage /></GuestOnlyRoute>} />
         <Route path="/signup" element={<GuestOnlyRoute><SignUpPage /></GuestOnlyRoute>} />
-        <Route path="/admin" element={<AdminRoute />} />
         <Route path="/category" element={<Navigate replace to={sectionPath('food')} />} />
         <Route path="/article" element={<Navigate replace to={storyPath('lead-story')} />} />
         <Route path="*" element={<Navigate replace to="/" />} />
