@@ -144,6 +144,9 @@ export function PinterestAdminTab({ stories }) {
   const [filterCoverage, setFilterCoverage] = useState('all');
   const [pinSearch, setPinSearch] = useState('');
   const [storySearch, setStorySearch] = useState('');
+  const [composerStorySearch, setComposerStorySearch] = useState('');
+  const [composerCoverage, setComposerCoverage] = useState('all');
+  const [composerVisibleCount, setComposerVisibleCount] = useState(8);
   const [sortBy, setSortBy] = useState('recent');
   const [activeStoryId, setActiveStoryId] = useState('');
 
@@ -273,6 +276,38 @@ export function PinterestAdminTab({ stories }) {
       if (right.postedCount !== left.postedCount) return right.postedCount - left.postedCount;
       return String(left.story.title ?? '').localeCompare(String(right.story.title ?? ''));
     });
+
+  const normalizedComposerStorySearch = normalizeText(composerStorySearch);
+  const composerStories = [...storySummaries]
+    .filter((summary) => {
+      if (composerCoverage === 'unpinned') return !summary.hasAnyPin;
+      if (composerCoverage === 'queued') return summary.hasQueuedPin;
+      if (composerCoverage === 'posted') return summary.hasPostedPin;
+      return true;
+    })
+    .filter((summary) => {
+      if (!normalizedComposerStorySearch) return true;
+      const haystack = [
+        summary.story.title,
+        summary.story.excerpt,
+        summary.story.sectionLabel,
+        summary.story.topicLabel,
+      ].map(normalizeText).join(' ');
+      return haystack.includes(normalizedComposerStorySearch);
+    })
+    .sort((left, right) => {
+      const activeDelta = Number(right.story.id === form.storyId) - Number(left.story.id === form.storyId);
+      if (activeDelta) return activeDelta;
+      const unpinnedDelta = Number(!left.hasAnyPin) - Number(!right.hasAnyPin);
+      if (unpinnedDelta) return unpinnedDelta;
+      if (left.hasPostedPin !== right.hasPostedPin) return Number(left.hasPostedPin) - Number(right.hasPostedPin);
+      return String(left.story.title ?? '').localeCompare(String(right.story.title ?? ''));
+    });
+  const visibleComposerStories = composerStories.slice(0, composerVisibleCount);
+
+  useEffect(() => {
+    setComposerVisibleCount(8);
+  }, [composerStorySearch, composerCoverage]);
 
   function scrollToComposer() {
     document.getElementById('pinterest-composer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -512,15 +547,96 @@ export function PinterestAdminTab({ stories }) {
           ) : null}
 
           <form className="admin-form" onSubmit={submitPin}>
-            <label>
-              Story
-              <select value={form.storyId} onChange={(event) => chooseStory(event.target.value)}>
-                <option value="">- choose a story -</option>
-                {[...stories].sort((left, right) => String(left.title ?? '').localeCompare(String(right.title ?? ''))).map((story) => (
-                  <option key={story.id} value={story.id}>{story.title}</option>
-                ))}
-              </select>
-            </label>
+            <section className="pinterest-admin__story-picker">
+              <div className="admin-panel__heading pinterest-admin__story-picker-heading">
+                <div>
+                  <span className="eyebrow">Story picker</span>
+                  <h3>Pick a story visually</h3>
+                </div>
+                <div className="admin-panel__heading-meta">
+                  <p>Search by title or topic, then choose from cards with cover image and pin status.</p>
+                </div>
+              </div>
+
+              <div className="pinterest-admin__filters pinterest-admin__filters--picker">
+                <label className="admin-search-field admin-search-field--wide">
+                  <span>Search stories</span>
+                  <input
+                    value={composerStorySearch}
+                    onChange={(event) => setComposerStorySearch(event.target.value)}
+                    placeholder="Search title, excerpt, section..."
+                  />
+                </label>
+                <label className="admin-inline-field">
+                  <span>Show</span>
+                  <select value={composerCoverage} onChange={(event) => setComposerCoverage(event.target.value)}>
+                    <option value="all">All stories</option>
+                    <option value="unpinned">Needs first pin</option>
+                    <option value="queued">Queued or draft</option>
+                    <option value="posted">Already pinned</option>
+                  </select>
+                </label>
+              </div>
+
+              {visibleComposerStories.length ? (
+                <div className="pinterest-admin__story-picker-grid">
+                  {visibleComposerStories.map((summary) => (
+                    <article
+                      key={summary.story.id}
+                      className={`pinterest-admin__story-option ${form.storyId === summary.story.id ? 'pinterest-admin__story-option--active' : ''}`}
+                    >
+                      {summary.story.image ? (
+                        <img
+                          className="pinterest-admin__story-option-image"
+                          src={storyImage(summary.story)}
+                          alt={summary.story.title}
+                        />
+                      ) : (
+                        <div className="pinterest-admin__story-option-image pinterest-admin__story-option-image--empty" />
+                      )}
+                      <div className="pinterest-admin__story-option-body">
+                        <div className="admin-badge-list admin-badge-list--start">
+                          {summary.hasPostedPin ? <span className="admin-badge admin-badge--accent">Pinned</span> : null}
+                          {!summary.hasAnyPin ? <span className="admin-badge">New</span> : null}
+                          <span className="admin-badge admin-badge--soft">{summary.pinCount} pins</span>
+                        </div>
+                        <h4>{summary.story.title}</h4>
+                        <p>{truncateText(summary.story.excerpt || 'No excerpt available yet.', 110)}</p>
+                        <div className="admin-record-card__meta">
+                          <span>{summary.story.sectionLabel ?? 'Story'}</span>
+                          {summary.story.topicLabel ? <span>{summary.story.topicLabel}</span> : null}
+                        </div>
+                        <div className="admin-record-card__actions">
+                          <button type="button" className="button-secondary" onClick={() => chooseStory(summary.story.id)}>
+                            {form.storyId === summary.story.id ? 'Selected' : 'Use this story'}
+                          </button>
+                          <a className="button-secondary" href={storyDestination(summary.story)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                            Preview
+                          </a>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="admin-library-empty">
+                  <h3>No stories found</h3>
+                  <p>Try a different keyword or broaden the picker filter.</p>
+                </div>
+              )}
+
+              {composerStories.length > composerVisibleCount ? (
+                <div className="pinterest-admin__actions">
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setComposerVisibleCount((count) => count + 8)}
+                  >
+                    Load 8 more stories
+                  </button>
+                </div>
+              ) : null}
+            </section>
 
             <label>
               Pin title *
