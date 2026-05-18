@@ -144,6 +144,7 @@ export function PinterestAdminTab({ stories }) {
   const [filterCoverage, setFilterCoverage] = useState('all');
   const [pinSearch, setPinSearch] = useState('');
   const [storySearch, setStorySearch] = useState('');
+  const [coverageVisibleCount, setCoverageVisibleCount] = useState(12);
   const [composerStorySearch, setComposerStorySearch] = useState('');
   const [composerCoverage, setComposerCoverage] = useState('all');
   const [composerVisibleCount, setComposerVisibleCount] = useState(8);
@@ -276,6 +277,11 @@ export function PinterestAdminTab({ stories }) {
       if (right.postedCount !== left.postedCount) return right.postedCount - left.postedCount;
       return String(left.story.title ?? '').localeCompare(String(right.story.title ?? ''));
     });
+  const visibleFilteredStories = filteredStories.slice(0, coverageVisibleCount);
+
+  useEffect(() => {
+    setCoverageVisibleCount(12);
+  }, [storySearch, filterCoverage]);
 
   const normalizedComposerStorySearch = normalizeText(composerStorySearch);
   const composerStories = [...storySummaries]
@@ -795,6 +801,11 @@ export function PinterestAdminTab({ stories }) {
               </label>
             </div>
 
+            <div className="admin-record-card__meta">
+              <span>Showing {Math.min(coverageVisibleCount, filteredStories.length)} of {filteredStories.length} stories</span>
+              {filterCoverage !== 'all' ? <span>Filter: {filterCoverage}</span> : null}
+            </div>
+
             {!loading && filteredStories.length === 0 ? (
               <div className="admin-library-empty">
                 <h3>No stories match this view</h3>
@@ -803,7 +814,7 @@ export function PinterestAdminTab({ stories }) {
             ) : null}
 
             <div className="admin-record-list admin-record-list--stories pinterest-admin__story-grid">
-              {filteredStories.map((summary) => (
+              {visibleFilteredStories.map((summary) => (
                 <article
                   key={summary.story.id}
                   className={`admin-record-card admin-record-card--story ${summary.story.id === activeStoryId ? 'admin-record-card--active' : ''}`}
@@ -849,6 +860,30 @@ export function PinterestAdminTab({ stories }) {
                 </article>
               ))}
             </div>
+
+            {filteredStories.length > coverageVisibleCount ? (
+              <div className="pinterest-admin__actions">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setCoverageVisibleCount((count) => count + 12)}
+                >
+                  Load 12 more stories
+                </button>
+              </div>
+            ) : null}
+
+            {filteredStories.length > 12 && coverageVisibleCount > 12 ? (
+              <div className="pinterest-admin__actions">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setCoverageVisibleCount(12)}
+                >
+                  Collapse list
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="story-surface admin-panel">
