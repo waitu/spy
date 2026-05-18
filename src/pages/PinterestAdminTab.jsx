@@ -72,6 +72,25 @@ function hasValidBoardSelection(boardId) {
   return /^\d+$/.test(String(boardId ?? '').trim());
 }
 
+function hasValidPostingDestination(link) {
+  const normalized = String(link ?? '').trim();
+  if (!normalized) return false;
+
+  try {
+    const url = normalized.startsWith('http://') || normalized.startsWith('https://')
+      ? new URL(normalized)
+      : new URL(normalized.startsWith('/') ? normalized : `/${normalized}`, SITE_ORIGIN);
+
+    return url.origin === SITE_ORIGIN && url.pathname.startsWith('/story/');
+  } catch {
+    return false;
+  }
+}
+
+function hasDetailedDescription(value) {
+  return String(value ?? '').trim().length >= 60;
+}
+
 function buildStorySummary(story, pins) {
   const storyPins = pins.filter((pin) => pin.story_id === story.id);
   const postedCount = storyPins.filter((pin) => pin.status === 'posted').length;
@@ -687,6 +706,7 @@ export function PinterestAdminTab({ stories }) {
                 onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                 placeholder="Add SEO-friendly copy and a clear reason to click"
               />
+              <small>Use at least 60 characters before posting to reduce low-quality or spam-like submissions.</small>
             </label>
 
             <label>
@@ -697,6 +717,7 @@ export function PinterestAdminTab({ stories }) {
                 onChange={(event) => setForm((current) => ({ ...current, link: event.target.value }))}
                 placeholder="https://sponbit.com/story/..."
               />
+              <small>Use a public story URL under /story/..., not the homepage, admin pages, search, or legal pages.</small>
             </label>
 
             <label>
@@ -1035,8 +1056,16 @@ export function PinterestAdminTab({ stories }) {
                         <button
                           type="button"
                           className="button-primary"
-                          disabled={busyPinId === pin.id || !hasValidBoardSelection(pin.board_id)}
-                          title={hasValidBoardSelection(pin.board_id) ? '' : 'Select a Pinterest board before posting'}
+                          disabled={busyPinId === pin.id || !hasValidBoardSelection(pin.board_id) || !hasValidPostingDestination(pin.link) || !hasDetailedDescription(pin.description)}
+                          title={
+                            !hasValidBoardSelection(pin.board_id)
+                              ? 'Select a Pinterest board before posting'
+                              : !hasValidPostingDestination(pin.link)
+                                ? 'Use a public story URL under /story/... before posting'
+                                : !hasDetailedDescription(pin.description)
+                                  ? 'Add a more detailed description before posting'
+                                  : ''
+                          }
                           onClick={() => postNow(pin.id)}
                         >
                           {busyPinId === pin.id ? 'Posting...' : 'Post now'}

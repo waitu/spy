@@ -299,6 +299,8 @@ export function Layout({ children }) {
           <div>
             <SponbitLogo className="footer-svg-logo" />
             <p>Food, culture & modern lifestyle.</p>
+            <Link to="/about">About</Link>
+            <Link to="/editorial-policy">Editorial Policy</Link>
             <Link to="/privacy">Privacy Policy</Link>
           </div>
           <div>
@@ -313,6 +315,7 @@ export function Layout({ children }) {
             <h4>Explore</h4>
             <Link to={sectionPath('food')}>Food</Link>
             <Link to={sectionPath('shopping')}>Shopping</Link>
+            <Link to="/contact">Contact</Link>
             {user?.role === 'admin' ? <Link to="/admin">Admin</Link> : <Link to="/signin">Sign In</Link>}
           </div>
         </div>

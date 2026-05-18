@@ -4,6 +4,7 @@ const PINTEREST_API = 'https://api.pinterest.com/v5';
 const CLIENT_ID = process.env.PINTEREST_CLIENT_ID ?? '';
 const CLIENT_SECRET = process.env.PINTEREST_CLIENT_SECRET ?? '';
 const REDIRECT_URI = process.env.PINTEREST_REDIRECT_URI ?? 'https://sponbit.com/api/pinterest/callback';
+const SITE_ORIGIN = process.env.SITE_ORIGIN ?? 'https://sponbit.com';
 
 function normalizeOptionalText(value) {
   if (value == null) return null;
@@ -17,6 +18,174 @@ function createBadRequest(message) {
   const error = new Error(message);
   error.status = 400;
   return error;
+}
+
+function getSiteUrl() {
+  try {
+    return new URL(SITE_ORIGIN);
+  } catch {
+    return new URL('https://sponbit.com');
+  }
+}
+
+function normalizePinUrl(value) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    throw createBadRequest('Add a destination link before posting this pin');
+  }
+
+  const siteUrl = getSiteUrl();
+  const url = normalized.startsWith('http://') || normalized.startsWith('https://')
+    ? new URL(normalized)
+    : new URL(normalized.startsWith('/') ? normalized : `/${normalized}`, siteUrl);
+
+  if (url.protocol !== 'https:') {
+    throw createBadRequest('Pinterest pins must use an https destination URL');
+  }
+
+  if (url.host !== siteUrl.host) {
+    throw createBadRequest(`Pinterest destination links must stay on ${siteUrl.host}`);
+  }
+
+  return url;
+}
+
+function normalizePinImageUrl(value) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    throw createBadRequest('Add a public image URL before posting this pin');
+  }
+
+  const siteUrl = getSiteUrl();
+  const url = normalized.startsWith('http://') || normalized.startsWith('https://')
+    ? new URL(normalized)
+    : new URL(normalized.startsWith('/') ? normalized : `/${normalized}`, siteUrl);
+
+  if (!/^https?:$/.test(url.protocol)) {
+    throw createBadRequest('Pin images must use an http or https URL');
+  }
+
+  return url;
+}
+
+function validatePostingCopy(pin) {
+  const title = String(pin.title ?? '').trim();
+  const description = String(pin.description ?? '').trim();
+
+  if (title.length < 20) {
+    throw createBadRequest('Use a more specific Pinterest title with at least 20 characters');
+  }
+
+  if (description.length < 60) {
+    throw createBadRequest('Add a more detailed pin description with at least 60 characters before posting');
+  }
+}
+
+function validateDestinationPath(url) {
+  const blockedPaths = new Set(['/', '/about', '/contact', '/editorial-policy', '/privacy', '/signin', '/signup', '/admin', '/search']);
+
+  if (blockedPaths.has(url.pathname)) {
+    throw createBadRequest('Use a public story URL for Pinterest, not the homepage or utility pages');
+  }
+
+  if (!url.pathname.startsWith('/story/')) {
+    throw createBadRequest('Use a story URL under /story/... for Pinterest posts');
+  }
+}
+
+async function assertDestinationPageLooksPublishable(url) {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'SponbitPinValidator/1.0',
+      Accept: 'text/html,application/xhtml+xml',
+    },
+  });
+
+  if (!response.ok) {
+    throw createBadRequest(`Destination page returned ${response.status}. Publish the story page successfully before posting to Pinterest.`);
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('text/html')) {
+    throw createBadRequest('Destination link must load a public HTML page');
+  }
+
+  const html = await response.text();
+  const compact = html.replace(/\s+/g, ' ');
+
+  if (/content="noindex/i.test(compact)) {
+    throw createBadRequest('Destination page is marked noindex, which is risky for Pinterest distribution');
+  }
+
+  if (!/<meta property="og:type" content="article"\s*\/>/i.test(compact)) {
+    throw createBadRequest('Destination page is missing article metadata. Deploy the web metadata changes before posting this pin.');
+  }
+
+  if (!/<link rel="canonical" href="https?:\/\/[^\"]+\/story\//i.test(compact)) {
+    throw createBadRequest('Destination page is missing a story canonical tag. Use a published story URL instead of a generic page.');
+  }
+
+  if (!/<title>[^<]+\| Sponbit<\/title>/i.test(compact)) {
+    throw createBadRequest('Destination page title still looks generic. Confirm the story page metadata is live before posting.');
+  }
+}
+
+async function assertImageUrlIsReachable(url) {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'SponbitPinValidator/1.0',
+      Accept: 'image/*,*/*;q=0.8',
+    },
+  });
+
+  if (!response.ok) {
+    throw createBadRequest(`Pin image returned ${response.status}. Use a publicly reachable image URL before posting.`);
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.startsWith('image/')) {
+    throw createBadRequest('Pin image URL must return an image content-type');
+  }
+}
+
+async function assertNoRecentBoardDuplicate(pinId, boardId, absoluteLink, relativeLink) {
+  const { rows } = await pool.query(
+    `select id, posted_at
+     from pinterest_pins
+     where id <> $1
+       and board_id = $2
+       and status = 'posted'
+       and posted_at >= now() - interval '30 days'
+       and (link = $3 or link = $4)
+     order by posted_at desc
+     limit 1`,
+    [pinId, boardId, absoluteLink, relativeLink]
+  );
+
+  if (rows[0]) {
+    throw createBadRequest('A pin with this same destination URL was already posted to this board recently. Change the story or board before posting again.');
+  }
+}
+
+async function runPinPostingPreflight(pinId, pin) {
+  validatePostingCopy(pin);
+
+  const destinationUrl = normalizePinUrl(pin.link);
+  validateDestinationPath(destinationUrl);
+
+  const imageUrl = normalizePinImageUrl(pin.image_url);
+  const relativeLink = `${destinationUrl.pathname}${destinationUrl.search}`;
+
+  await Promise.all([
+    assertDestinationPageLooksPublishable(destinationUrl),
+    assertImageUrlIsReachable(imageUrl),
+    assertNoRecentBoardDuplicate(pinId, pin.board_id, destinationUrl.toString(), relativeLink),
+  ]);
+
+  return {
+    destinationUrl: destinationUrl.toString(),
+    imageUrl: imageUrl.toString(),
+  };
 }
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
@@ -306,16 +475,14 @@ export async function postPinNow(pinId) {
     throw createBadRequest('Pin has an invalid Pinterest board id. Re-select the board and save the pin before posting.');
   }
 
-  // Build absolute image URL
-  const origin = process.env.SITE_ORIGIN ?? 'https://sponbit.com';
-  const imageUrl = pin.image_url.startsWith('http') ? pin.image_url : `${origin}${pin.image_url}`;
-
   try {
+    const { destinationUrl, imageUrl } = await runPinPostingPreflight(pinId, pin);
+
     const result = await pinterestPost('/pins', {
       board_id: pin.board_id,
       title: pin.title,
       description: pin.description,
-      link: pin.link.startsWith('http') ? pin.link : `${origin}${pin.link}`,
+      link: destinationUrl,
       media_source: {
         source_type: 'image_url',
         url: imageUrl,

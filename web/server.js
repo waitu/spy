@@ -47,8 +47,14 @@ function replaceTag(html, pattern, replacement) {
 }
 
 function injectJsonLd(html, payload) {
-  const script = `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
-  return html.replace('</head>', `${script}\n  </head>`);
+  const script = `    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
+  const existingPattern = /<script type="application\/ld\+json">[\s\S]*?<\/script>/i;
+
+  if (existingPattern.test(html)) {
+    return html.replace(existingPattern, script);
+  }
+
+  return html.replace('</head>', `\n${script}\n  </head>`);
 }
 
 function applyMetaTags(template, meta) {
@@ -107,6 +113,114 @@ function buildDefaultMeta(origin, requestPath) {
   };
 }
 
+function buildStaticPageMeta(origin, requestPath) {
+  const canonical = new URL(requestPath || '/', origin).toString();
+
+  if (requestPath === '/about') {
+    return {
+      title: 'About Sponbit | Publisher, Editorial Process, Contact',
+      description: 'Learn who publishes Sponbit, what the site covers, how stories are handled, and how to contact the editorial team.',
+      canonical,
+      image: `${origin}/og-cover.jpg`,
+      ogType: 'website',
+      robots: 'index, follow',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Sponbit',
+        url: origin,
+        email: 'editor@sponbit.com',
+        contactPoint: [
+          {
+            '@type': 'ContactPoint',
+            contactType: 'editorial',
+            email: 'editor@sponbit.com',
+          },
+          {
+            '@type': 'ContactPoint',
+            contactType: 'privacy',
+            email: 'privacy@sponbit.com',
+          },
+        ],
+      },
+    };
+  }
+
+  if (requestPath === '/contact') {
+    return {
+      title: 'Contact Sponbit | Editorial, Corrections, Business',
+      description: 'Contact Sponbit for editorial questions, corrections, business inquiries, or privacy matters.',
+      canonical,
+      image: `${origin}/og-cover.jpg`,
+      ogType: 'website',
+      robots: 'index, follow',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'ContactPage',
+        name: 'Contact Sponbit',
+        url: canonical,
+        mainEntity: {
+          '@type': 'Organization',
+          name: 'Sponbit',
+          url: origin,
+          contactPoint: [
+            {
+              '@type': 'ContactPoint',
+              contactType: 'editorial',
+              email: 'editor@sponbit.com',
+            },
+            {
+              '@type': 'ContactPoint',
+              contactType: 'business',
+              email: 'hello@sponbit.com',
+            },
+            {
+              '@type': 'ContactPoint',
+              contactType: 'privacy',
+              email: 'privacy@sponbit.com',
+            },
+          ],
+        },
+      },
+    };
+  }
+
+  if (requestPath === '/editorial-policy') {
+    return {
+      title: 'Editorial Policy | Sponbit',
+      description: 'How Sponbit sources, reviews, attributes, updates, and corrects editorial content.',
+      canonical,
+      image: `${origin}/og-cover.jpg`,
+      ogType: 'website',
+      robots: 'index, follow',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: 'Editorial Policy',
+        url: canonical,
+        about: {
+          '@type': 'Organization',
+          name: 'Sponbit',
+          url: origin,
+        },
+      },
+    };
+  }
+
+  if (requestPath === '/privacy') {
+    return {
+      title: 'Privacy Policy | Sponbit',
+      description: 'How Sponbit collects, uses, and protects information across the website and connected publishing tools.',
+      canonical,
+      image: `${origin}/og-cover.jpg`,
+      ogType: 'website',
+      robots: 'index, follow',
+    };
+  }
+
+  return null;
+}
+
 function buildStoryMeta(origin, story) {
   const canonical = new URL(story.path ?? `/story/${story.id}`, origin).toString();
   const image = absoluteUrl(origin, story.image);
@@ -150,7 +264,7 @@ app.get(/.*/, async (request, response) => {
   const template = readIndexTemplate();
   const storyMatch = request.path.match(/^\/story\/([^/]+)$/);
 
-  let meta = buildDefaultMeta(origin, request.originalUrl);
+  let meta = buildStaticPageMeta(origin, request.path) ?? buildDefaultMeta(origin, request.originalUrl);
 
   if (storyMatch) {
     try {

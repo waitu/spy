@@ -754,6 +754,148 @@ function PrivacyPolicyPage() {
   );
 }
 
+function AboutPage() {
+  return (
+    <>
+      <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'About Sponbit' }]} />
+      <PageMasthead
+        eyebrow="About"
+        title="About Sponbit"
+        description="Who publishes Sponbit, how stories are sourced, and how to contact the editorial team."
+      />
+      <section className="site-width topic-layout">
+        <article className="topic-main page-state story-surface">
+          <p>
+            Sponbit is an editorial site focused on food, culture, entertainment, lifestyle, and internet-forward consumer topics.
+            We publish a mix of original editorial packaging, trend coverage, and source-attributed reporting.
+          </p>
+
+          <h2>What We Publish</h2>
+          <p>
+            Our coverage includes food and recipes, beauty and self-care, celebrity and entertainment news,
+            shopping picks, travel, and broader culture stories that fit the Sponbit audience.
+          </p>
+
+          <h2>Editorial Process</h2>
+          <p>
+            Stories are reviewed and organized inside the Sponbit editorial workspace before publication.
+            When a story references an outside source, we preserve source attribution and link context where applicable.
+          </p>
+
+          <h2>Corrections</h2>
+          <p>
+            If you believe a story is inaccurate, incomplete, or improperly attributed, contact us and include the story URL plus the issue you found.
+            We review correction requests and update content when warranted.
+          </p>
+
+          <h2>Contact</h2>
+          <p>
+            Editorial and general questions: <a href="mailto:editor@sponbit.com">editor@sponbit.com</a>.
+          </p>
+          <p>
+            Privacy and policy questions: <a href="mailto:privacy@sponbit.com">privacy@sponbit.com</a>.
+          </p>
+
+          <h2>Publisher</h2>
+          <p>
+            Publisher name: Sponbit.<br />
+            Website: <a href="https://sponbit.com">https://sponbit.com</a>
+          </p>
+        </article>
+      </section>
+    </>
+  );
+}
+
+function ContactPage() {
+  return (
+    <>
+      <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Contact' }]} />
+      <PageMasthead
+        eyebrow="Contact"
+        title="Contact Sponbit"
+        description="Reach the Sponbit editorial and policy team for corrections, business questions, or general inquiries."
+      />
+      <section className="site-width topic-layout">
+        <article className="topic-main page-state story-surface">
+          <p>
+            Use the contacts below for editorial questions, correction requests, business inquiries, or privacy matters.
+            When reporting an issue, include the full page URL and a short description so the team can review it quickly.
+          </p>
+
+          <h2>Editorial</h2>
+          <p>
+            Story questions, sourcing questions, and corrections: <a href="mailto:editor@sponbit.com">editor@sponbit.com</a>.
+          </p>
+
+          <h2>Business</h2>
+          <p>
+            Partnerships and general business inquiries: <a href="mailto:hello@sponbit.com">hello@sponbit.com</a>.
+          </p>
+
+          <h2>Privacy</h2>
+          <p>
+            Policy and data questions: <a href="mailto:privacy@sponbit.com">privacy@sponbit.com</a>.
+          </p>
+
+          <h2>Response Expectations</h2>
+          <p>
+            We review requests as quickly as possible and prioritize factual corrections, attribution issues, and safety-related concerns.
+          </p>
+        </article>
+      </section>
+    </>
+  );
+}
+
+function EditorialPolicyPage() {
+  return (
+    <>
+      <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Editorial Policy' }]} />
+      <PageMasthead
+        eyebrow="Policy"
+        title="Editorial Policy"
+        description="How Sponbit sources, reviews, attributes, updates, and corrects editorial content."
+      />
+      <section className="site-width topic-layout">
+        <article className="topic-main page-state story-surface">
+          <p>
+            Sponbit publishes editorial content across food, culture, entertainment, beauty, shopping, travel, and related lifestyle topics.
+            Our goal is to provide clear, source-aware coverage that is useful and readable for the audience we serve.
+          </p>
+
+          <h2>Sourcing</h2>
+          <p>
+            When a story is based on outside reporting, announcements, or original source material, we preserve attribution and link context where applicable.
+            We avoid presenting third-party reporting as original on-the-ground reporting when it is not.
+          </p>
+
+          <h2>Review</h2>
+          <p>
+            Stories are reviewed in the Sponbit editorial workspace before publication. Editors may revise headlines, summaries, structure, and sourcing notes for clarity and accuracy.
+          </p>
+
+          <h2>Updates and Corrections</h2>
+          <p>
+            If a factual error, attribution issue, or omission is identified, we review it and update the article when warranted.
+            Readers can send correction requests to <a href="mailto:editor@sponbit.com">editor@sponbit.com</a>.
+          </p>
+
+          <h2>AI and Automation</h2>
+          <p>
+            Sponbit may use internal tools to assist editorial workflows, organization, or formatting, but published content remains subject to editorial review before release.
+          </p>
+
+          <h2>Commercial Independence</h2>
+          <p>
+            Advertising, analytics, and distribution tooling do not determine editorial conclusions. Any sponsored or partner-specific material should be clearly separated from standard editorial content.
+          </p>
+        </article>
+      </section>
+    </>
+  );
+}
+
 export default function App() {
   const location = useLocation();
   const isAdminArea = location.pathname.startsWith('/admin');
@@ -778,6 +920,9 @@ export default function App() {
         <Route path="/section/:sectionKey/:topicSlug" element={<TopicPage />} />
         <Route path="/story/:storyId" element={<StoryPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/editorial-policy" element={<EditorialPolicyPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/signin" element={<GuestOnlyRoute><SignInPage /></GuestOnlyRoute>} />
         <Route path="/signup" element={<GuestOnlyRoute><SignUpPage /></GuestOnlyRoute>} />
