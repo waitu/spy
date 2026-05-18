@@ -144,6 +144,8 @@ export function PinterestAdminTab({ stories }) {
   const [filterCoverage, setFilterCoverage] = useState('all');
   const [pinSearch, setPinSearch] = useState('');
   const [storySearch, setStorySearch] = useState('');
+  const [storySectionFilter, setStorySectionFilter] = useState('all');
+  const [storyStatusSort, setStoryStatusSort] = useState('attention');
   const [coverageVisibleCount, setCoverageVisibleCount] = useState(12);
   const [composerStorySearch, setComposerStorySearch] = useState('');
   const [composerCoverage, setComposerCoverage] = useState('all');
@@ -227,6 +229,8 @@ export function PinterestAdminTab({ stories }) {
   const storiesPosted = storySummaries.filter((summary) => summary.hasPostedPin).length;
   const storiesPending = storySummaries.filter((summary) => summary.hasQueuedPin && !summary.hasPostedPin).length;
   const storiesWithoutPins = storySummaries.filter((summary) => !summary.hasAnyPin).length;
+  const storySections = [...new Set(storySummaries.map((summary) => summary.story.sectionLabel).filter(Boolean))]
+    .sort((left, right) => String(left).localeCompare(String(right)));
 
   const normalizedPinSearch = normalizeText(pinSearch);
   const filteredPins = [...pins]
@@ -263,6 +267,7 @@ export function PinterestAdminTab({ stories }) {
       if (filterCoverage === 'unpinned') return !summary.hasAnyPin;
       return true;
     })
+    .filter((summary) => (storySectionFilter === 'all' ? true : summary.story.sectionLabel === storySectionFilter))
     .filter((summary) => {
       if (!normalizedStorySearch) return true;
       const haystack = [summary.story.title, summary.story.excerpt, summary.story.sectionLabel, summary.story.topicLabel]
@@ -271,6 +276,22 @@ export function PinterestAdminTab({ stories }) {
       return haystack.includes(normalizedStorySearch);
     })
     .sort((left, right) => {
+      if (storyStatusSort === 'attention') {
+        const leftAttention = (left.failedCount * 20) + (left.hasAnyPin ? 0 : 10) + left.scheduledCount + left.draftCount;
+        const rightAttention = (right.failedCount * 20) + (right.hasAnyPin ? 0 : 10) + right.scheduledCount + right.draftCount;
+        if (rightAttention !== leftAttention) return rightAttention - leftAttention;
+      }
+
+      if (storyStatusSort === 'recent') {
+        const leftTime = new Date(left.latestPin?.updated_at ?? left.latestPin?.created_at ?? 0).getTime();
+        const rightTime = new Date(right.latestPin?.updated_at ?? right.latestPin?.created_at ?? 0).getTime();
+        if (rightTime !== leftTime) return rightTime - leftTime;
+      }
+
+      if (storyStatusSort === 'title') {
+        return String(left.story.title ?? '').localeCompare(String(right.story.title ?? ''));
+      }
+
       const activeDelta = Number(right.story.id === activeStoryId) - Number(left.story.id === activeStoryId);
       if (activeDelta) return activeDelta;
       if (right.pinCount !== left.pinCount) return right.pinCount - left.pinCount;
@@ -281,7 +302,7 @@ export function PinterestAdminTab({ stories }) {
 
   useEffect(() => {
     setCoverageVisibleCount(12);
-  }, [storySearch, filterCoverage]);
+  }, [storySearch, filterCoverage, storySectionFilter, storyStatusSort]);
 
   const normalizedComposerStorySearch = normalizeText(composerStorySearch);
   const composerStories = [...storySummaries]
@@ -791,6 +812,15 @@ export function PinterestAdminTab({ stories }) {
                 <input value={storySearch} onChange={(event) => setStorySearch(event.target.value)} placeholder="Search by title, excerpt, section..." />
               </label>
               <label className="admin-inline-field">
+                <span>Section</span>
+                <select value={storySectionFilter} onChange={(event) => setStorySectionFilter(event.target.value)}>
+                  <option value="all">All sections</option>
+                  {storySections.map((section) => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-inline-field">
                 <span>Coverage</span>
                 <select value={filterCoverage} onChange={(event) => setFilterCoverage(event.target.value)}>
                   <option value="all">All stories</option>
@@ -799,11 +829,20 @@ export function PinterestAdminTab({ stories }) {
                   <option value="unpinned">No pins yet</option>
                 </select>
               </label>
+              <label className="admin-inline-field">
+                <span>Sort</span>
+                <select value={storyStatusSort} onChange={(event) => setStoryStatusSort(event.target.value)}>
+                  <option value="attention">Needs attention first</option>
+                  <option value="recent">Latest activity</option>
+                  <option value="title">Title A-Z</option>
+                </select>
+              </label>
             </div>
 
             <div className="admin-record-card__meta">
               <span>Showing {Math.min(coverageVisibleCount, filteredStories.length)} of {filteredStories.length} stories</span>
               {filterCoverage !== 'all' ? <span>Filter: {filterCoverage}</span> : null}
+              {storySectionFilter !== 'all' ? <span>Section: {storySectionFilter}</span> : null}
             </div>
 
             {!loading && filteredStories.length === 0 ? (
