@@ -5,6 +5,20 @@ const CLIENT_ID = process.env.PINTEREST_CLIENT_ID ?? '';
 const CLIENT_SECRET = process.env.PINTEREST_CLIENT_SECRET ?? '';
 const REDIRECT_URI = process.env.PINTEREST_REDIRECT_URI ?? 'https://sponbit.com/api/pinterest/callback';
 
+function normalizeOptionalText(value) {
+  if (value == null) return null;
+  if (typeof value !== 'string') return value;
+
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function createBadRequest(message) {
+  const error = new Error(message);
+  error.status = 400;
+  return error;
+}
+
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
 export function buildOAuthUrl(state) {
@@ -213,6 +227,9 @@ export async function listPins({ storyId, status, limit = 50, offset = 0 } = {})
 }
 
 export async function createPin(data) {
+  const boardId = normalizeOptionalText(data.boardId);
+  const boardName = normalizeOptionalText(data.boardName);
+
   const { rows } = await pool.query(
     `insert into pinterest_pins
        (story_id, account_id, board_id, board_name, title, description, link, image_url, alt_text, scheduled_at, status)
@@ -221,8 +238,8 @@ export async function createPin(data) {
     [
       data.storyId ?? null,
       data.accountId,
-      data.boardId ?? null,
-      data.boardName ?? null,
+      boardId,
+      boardName,
       data.title,
       data.description ?? '',
       data.link,
@@ -241,8 +258,15 @@ export async function updatePin(pinId, data) {
 
   if ('title' in data) { fields.push(`title = $${params.push(data.title)}`); }
   if ('description' in data) { fields.push(`description = $${params.push(data.description)}`); }
-  if ('boardId' in data) { fields.push(`board_id = $${params.push(data.boardId)}`); }
-  if ('boardName' in data) { fields.push(`board_name = $${params.push(data.boardName)}`); }
+  if ('boardId' in data) {
+    const boardId = normalizeOptionalText(data.boardId);
+    fields.push(`board_id = $${params.push(boardId)}`);
+
+    if (boardId == null && !('boardName' in data)) {
+      fields.push(`board_name = $${params.push(null)}`);
+    }
+  }
+  if ('boardName' in data) { fields.push(`board_name = $${params.push(normalizeOptionalText(data.boardName))}`); }
   if ('imageUrl' in data) { fields.push(`image_url = $${params.push(data.imageUrl)}`); }
   if ('altText' in data) { fields.push(`alt_text = $${params.push(data.altText)}`); }
   if ('link' in data) { fields.push(`link = $${params.push(data.link)}`); }
@@ -277,6 +301,10 @@ export async function postPinNow(pinId) {
   const pin = rows[0];
   if (!pin) throw new Error('Pin not found');
   if (!pin.account_id) throw new Error('Pin has no associated Pinterest account');
+  if (!pin.board_id) throw createBadRequest('Select a Pinterest board before posting this pin');
+  if (!/^\d+$/.test(String(pin.board_id))) {
+    throw createBadRequest('Pin has an invalid Pinterest board id. Re-select the board and save the pin before posting.');
+  }
 
   // Build absolute image URL
   const origin = process.env.SITE_ORIGIN ?? 'https://sponbit.com';

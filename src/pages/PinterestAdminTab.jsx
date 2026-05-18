@@ -68,6 +68,10 @@ function truncateText(value, limit = 140) {
   return `${text.slice(0, limit - 1).trim()}...`;
 }
 
+function hasValidBoardSelection(boardId) {
+  return /^\d+$/.test(String(boardId ?? '').trim());
+}
+
 function buildStorySummary(story, pins) {
   const storyPins = pins.filter((pin) => pin.story_id === story.id);
   const postedCount = storyPins.filter((pin) => pin.status === 'posted').length;
@@ -1028,7 +1032,13 @@ export function PinterestAdminTab({ stories }) {
 
                     <div className="admin-record-card__actions">
                       {pin.status !== 'posted' && account ? (
-                        <button type="button" className="button-primary" disabled={busyPinId === pin.id} onClick={() => postNow(pin.id)}>
+                        <button
+                          type="button"
+                          className="button-primary"
+                          disabled={busyPinId === pin.id || !hasValidBoardSelection(pin.board_id)}
+                          title={hasValidBoardSelection(pin.board_id) ? '' : 'Select a Pinterest board before posting'}
+                          onClick={() => postNow(pin.id)}
+                        >
                           {busyPinId === pin.id ? 'Posting...' : 'Post now'}
                         </button>
                       ) : null}
